@@ -38,3 +38,18 @@ func TestSerializeRejectsDuplicateIPv4(t *testing.T) {
 		t.Fatal("expected duplicate IPv4 validation error")
 	}
 }
+
+func TestReadItemsKeepsShortDashComment(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dnsmasq.dhcphosts")
+	input := "# -\nAA:BB:CC:DD:EE:FF,192.168.1.10,test-device,infinite\n"
+	if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+		t.Fatal(err)
+	}
+	items, err := readItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 || items[0].Kind != "comment" || items[0].Raw != "# -" {
+		t.Fatalf("short comment should be retained, got: %#v", items)
+	}
+}

@@ -181,7 +181,7 @@ func readItems(path string) ([]Item, error) {
 		}
 		if strings.HasPrefix(trim, "#") {
 			decorative := strings.Trim(trim, "# -=_\t")
-			if decorative == "" && len(trim) >= 5 {
+			if decorative == "" && len(trim) >= 12 {
 				continue
 			}
 			const marker = "# LeaseEditor-Gruppe:"
