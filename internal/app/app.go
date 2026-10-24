@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -13,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -58,6 +60,7 @@ func Run(assets fs.FS) {
 	staticServer := http.FileServer(http.FS(assets))
 	mux.Handle("/static/", http.StripPrefix("/", staticServer))
 	mux.HandleFunc("/api/reservations", func(w http.ResponseWriter, r *http.Request) { handleReservations(w, r, hosts) })
+	mux.HandleFunc("/api/dnsmasq/restart", handleRestartDnsmasq)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -73,6 +76,35 @@ func Run(assets fs.FS) {
 	log.Printf("WLM LeaseEditor listening on %s; file=%s", addr, hosts)
 	log.Fatal(server.ListenAndServe())
 }
+
+// handleRestartDnsmasq performs only the fixed dnsmasq restart operation.
+// On a native installation, grant the service user this exact systemctl command
+// through sudoers. In containers, restarting the host service is not supported.
+func handleRestartDnsmasq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, `{"error":"Methode nicht erlaubt"}`, http.StatusMethodNotAllowed)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	var cmd *exec.Cmd
+	if os.Geteuid() == 0 {
+		cmd = exec.CommandContext(ctx, "/usr/bin/systemctl", "restart", "dnsmasq")
+	} else {
+		cmd = exec.CommandContext(ctx, "/usr/bin/sudo", "-n", "/usr/bin/systemctl", "restart", "dnsmasq")
+	}
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("dnsmasq restart failed: %v (%s)", err, strings.TrimSpace(string(output)))
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Neustart fehlgeschlagen. Prüfe systemd und die sudoers-Berechtigung für LeaseEditor."})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "dnsmasq wurde neu gestartet."})
+}
+
 func loadConfig(path string) (AppConfig, error) {
 	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009"}
 	data, err := os.ReadFile(path)

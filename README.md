@@ -44,7 +44,7 @@ go test ./...
 go vet ./...
 ```
 
-Die Weboberfläche hat keine Anmeldung. Stelle sie nicht ungeschützt ins Internet und nutze sie nur in einem vertrauenswürdigen LAN oder hinter einer authentifizierten Reverse-Proxy-Lösung. Das Programm führt keinen dnsmasq-Neustart aus.
+Die Weboberfläche hat keine Anmeldung. Stelle sie nicht ungeschützt ins Internet und nutze sie nur in einem vertrauenswürdigen LAN oder hinter einer authentifizierten Reverse-Proxy-Lösung. Der Button „dnsmasq neu starten“ ist für native systemd-Installationen vorgesehen. Installiere dafür die mitgelieferte `leaseeditor-dnsmasq.sudoers` als `/etc/sudoers.d/leaseeditor-dnsmasq` mit Modus `0440` (nur wenn dein Dienstbenutzer `pi` ist). Entferne in der systemd-Service-Datei `NoNewPrivileges=true` (in dieser Version bereits angepasst), lade systemd neu und starte LeaseEditor neu. Der Button führt ausschließlich `systemctl restart dnsmasq` aus. In Docker kann der Host-Dienst nicht auf diese Weise neu gestartet werden.
 
 
 ## Projektstruktur und Versionsanzeige
