@@ -36,6 +36,8 @@ type Document struct {
 var macPattern = regexp.MustCompile(`(?i)^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
 var BuildVersion = "1.0.0-Beta"
 var BuildReleaseDate = ""
+var BuildChannel = "Dev · Native"
+var BuildUpdatedAt = ""
 
 type AppConfig struct {
 	HostsFile string
@@ -62,7 +64,7 @@ func Run(assets fs.FS) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := page.Execute(w, map[string]string{"HostsFile": hosts, "Version": BuildVersion, "ReleaseDate": BuildReleaseDate}); err != nil {
+		if err := page.Execute(w, map[string]string{"HostsFile": hosts, "Version": BuildVersion, "ReleaseDate": BuildReleaseDate, "BuildChannel": BuildChannel, "UpdatedAt": BuildUpdatedAt}); err != nil {
 			log.Printf("render page: %v", err)
 		}
 	})
@@ -181,7 +183,7 @@ func readItems(path string) ([]Item, error) {
 		}
 		if strings.HasPrefix(trim, "#") {
 			decorative := strings.Trim(trim, "# -=_\t")
-			if decorative == "" && len(trim) >= 12 {
+			if decorative == "" && len(trim) >= 5 {
 				continue
 			}
 			const marker = "# LeaseEditor-Gruppe:"
