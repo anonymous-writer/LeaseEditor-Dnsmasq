@@ -1,46 +1,45 @@
-# WLM LeaseEditor
+# LeaseEditor-Dnsmasq
 
-Eigenständiger Go-Webeditor für dnsmasq DHCP-Reservierungen in `dnsmasq.dhcphosts`. Das Projekt orientiert sich am einfachen Go-Aufbau von LeaseLens, ist aber ein separates Programm.
+Eigenständiger Go-Webeditor für dnsmasq-DHCP-Reservierungen. Native Programmversion und Docker verwenden dieselbe `config.yaml`.
 
-## Funktionen im ersten Stand
+## Konfiguration
 
-- WLM-Logo und dunkle, responsive Weboberfläche
-- Reservierungen anzeigen, suchen, hinzufügen, bearbeiten und löschen
-- MAC-, IPv4- und optionale IPv6-Adresse sowie Hostname und Lease-Feld bearbeiten
-- Kommentare, Leerzeilen und unbekannte Zeilen beim Speichern beibehalten
-- Validierung von MAC-, IPv4- und IPv6-Adressen sowie doppelte MAC-/IPv4-Adressen
-- Vor dem Überschreiben wird eine Sicherung `dnsmasq.dhcphosts.bak` erstellt
-- Atomisches Schreiben über temporäre Datei
-- Go-Standardbibliothek, keine externen Go-Abhängigkeiten
-
-## Lokal starten
-
-```bash
-export DNSMASQ_HOSTS_FILE="$PWD/dnsmasq.dhcphosts"
-export HOST=127.0.0.1
-export PORT=3010
-go test ./...
-go run .
+```yaml
+# Web server
+hosts_file: "/var/lib/dnsmasq/dnsmasq.dhcphosts"
+host: "127.0.0.1"
+port: "3009"
 ```
 
-Öffne danach `http://127.0.0.1:3010`.
+- `hosts_file`: Pfad zur dnsmasq-Hosts-Datei
+- `host`: Bind-Adresse des Webservers. Für Zugriff aus dem LAN in der Regel `0.0.0.0` verwenden; `127.0.0.1` erlaubt nur lokale Zugriffe.
+- `port`: TCP-Port des Webservers
+
+## Native Version
+
+Lege `config.yaml` neben die Programmdatei und starte:
+
+```bash
+./leaseeditor-dnsmasq-linux-arm64 --config ./config.yaml
+```
+
+Der systemd-Dienst und das Update-Skript verwenden `/home/pi/leaseeditor-dnsmasq/config.yaml`.
 
 ## Docker Compose
 
-1. Passe in `compose.yaml` den Host-Pfad links vom Doppelpunkt an den tatsächlichen Speicherort der Datei an.
-2. Stelle sicher, dass der Container-Benutzer (UID/GID des Images: nicht-root `leaseeditor`) die Datei lesen und das Verzeichnis beschreiben darf. Für Sicherung und atomisches Ersetzen werden Schreibrechte im Verzeichnis benötigt.
-3. Starte das Programm:
+Lege `config.yaml` und `compose.yaml` in dasselbe Verzeichnis. Passe bei Bedarf den Host-Pfad für `/var/lib/dnsmasq` an und starte:
 
 ```bash
 docker compose up -d --build
 ```
 
-Öffne `http://<server-ip>:3010`.
+Compose bindet dieselbe `config.yaml` schreibgeschützt nach `/app/config.yaml` ein. Wenn du `port` änderst, passe auch das Port-Mapping in `compose.yaml` an.
 
-## Wichtige Hinweise
+## Tests und Sicherheit
 
-- Die Weboberfläche besitzt im ersten Stand keine Anmeldung. Veröffentliche den Port nicht im Internet; verwende ihn nur in einem vertrauenswürdigen LAN oder hinter einer authentifizierten Reverse-Proxy-Lösung.
-- Speichern schreibt die Datei direkt. Eine bestehende Sicherung `.bak` wird bei jedem Speichern aktualisiert.
-- Das Programm führt keinen dnsmasq-Neustart oder Reload aus. Prüfe nach dem Speichern, ob deine dnsmasq-Installation die Änderungen neu einlesen muss.
-- Kommentare und Zeilen, die das Programm nicht als einfache Reservierung erkennt, werden als Kommentar-/Rohzeilen erhalten. Wenn du eine solche Zeile bearbeiten möchtest, ändere sie manuell in der Originaldatei.
-- Dies ist ein erster Programmaufbau. Vor dem produktiven Einsatz sollte er zunächst mit einer Kopie deiner Datei getestet werden.
+```bash
+go test ./...
+go vet ./...
+```
+
+Die Weboberfläche hat keine Anmeldung. Stelle sie nicht ungeschützt ins Internet und nutze sie nur in einem vertrauenswürdigen LAN oder hinter einer authentifizierten Reverse-Proxy-Lösung. Das Programm führt keinen dnsmasq-Neustart aus.

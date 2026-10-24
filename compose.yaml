@@ -1,14 +1,12 @@
 services:
-  wlm-leaseeditor:
+  leaseeditor-dnsmasq:
     build: .
-    container_name: wlm-leaseeditor
+    container_name: leaseeditor-dnsmasq
     restart: unless-stopped
     ports:
-      - "3010:3010"
-    environment:
-      HOST: "0.0.0.0"
-      PORT: "3010"
-      DNSMASQ_HOSTS_FILE: "/data/dnsmasq.dhcphosts"
+      - "3009:3009"
     volumes:
-      # Replace the host path with the real location of your dnsmasq.dhcphosts.
-      - /var/lib/dnsmasq/dnsmasq.dhcphosts:/data/dnsmasq.dhcphosts:rw
+      # Native und Docker verwenden dieselbe Konfiguration.
+      - ./config.yaml:/app/config.yaml:ro
+      # Bei Bedarf den tatsächlichen Speicherort anpassen.
+      - /var/lib/dnsmasq:/var/lib/dnsmasq:rw

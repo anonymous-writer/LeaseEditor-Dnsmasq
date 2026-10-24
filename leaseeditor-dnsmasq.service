@@ -1,0 +1,20 @@
+[Unit]
+Description=LeaseEditor-Dnsmasq Weboberfläche
+After=network-online.target dnsmasq.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/leaseeditor-dnsmasq
+ExecStart=/usr/bin/leaseeditor-dnsmasq --config /home/pi/leaseeditor-dnsmasq/config.yaml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/dnsmasq /home/pi/leaseeditor-dnsmasq
+
+[Install]
+WantedBy=multi-user.target

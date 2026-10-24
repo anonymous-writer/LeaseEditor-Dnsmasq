@@ -1,0 +1,4 @@
+# Web server
+hosts_file: "/var/lib/dnsmasq/dnsmasq.dhcphosts"
+host: "127.0.0.1"
+port: "3009"

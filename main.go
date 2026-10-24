@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -37,8 +38,20 @@ var staticFiles embed.FS
 var macPattern = regexp.MustCompile(`(?i)^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
 var page = template.Must(template.New("index").Parse(indexHTML))
 
+type AppConfig struct {
+	HostsFile string
+	Host      string
+	Port      string
+}
+
 func main() {
-	hosts := env("DNSMASQ_HOSTS_FILE", "/var/lib/dnsmasq/dnsmasq.dhcphosts")
+	configPath := flag.String("config", "config.yaml", "Pfad zur YAML-Konfigurationsdatei")
+	flag.Parse()
+	cfg, err := loadConfig(*configPath)
+	if err != nil {
+		log.Fatalf("Konfiguration laden: %v", err)
+	}
+	hosts := cfg.HostsFile
 	mux := http.NewServeMux()
 	staticServer := http.FileServer(http.FS(staticFiles))
 	mux.Handle("/static/", http.StripPrefix("/", staticServer))
@@ -53,16 +66,47 @@ func main() {
 			log.Printf("render page: %v", err)
 		}
 	})
-	addr := env("HOST", "0.0.0.0") + ":" + env("PORT", "3010")
+	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 	server := &http.Server{Addr: addr, Handler: securityHeaders(mux), ReadHeaderTimeout: 5 * time.Second}
 	log.Printf("WLM LeaseEditor listening on %s; file=%s", addr, hosts)
 	log.Fatal(server.ListenAndServe())
 }
-func env(k, fallback string) string {
-	if v := strings.TrimSpace(os.Getenv(k)); v != "" {
-		return v
+func loadConfig(path string) (AppConfig, error) {
+	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009"}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return cfg, fmt.Errorf("Datei %q nicht lesbar: %w", path, err)
 	}
-	return fallback
+	for lineNo, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(strings.SplitN(line, "#", 2)[0])
+		if line == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			return cfg, fmt.Errorf("%s:%d: erwartet wird key: value", path, lineNo+1)
+		}
+		key, value = strings.TrimSpace(key), strings.TrimSpace(value)
+		value = strings.Trim(value, "\"'")
+		if value == "" {
+			return cfg, fmt.Errorf("%s:%d: leerer Wert für %s", path, lineNo+1, key)
+		}
+		switch key {
+		case "hosts_file":
+			cfg.HostsFile = value
+		case "host":
+			cfg.Host = value
+		case "port":
+			cfg.Port = value
+		default:
+			return cfg, fmt.Errorf("%s:%d: unbekannter Parameter %q", path, lineNo+1, key)
+		}
+	}
+	port, err := net.LookupPort("tcp", cfg.Port)
+	if err != nil || port < 1 || port > 65535 {
+		return cfg, fmt.Errorf("%s: ungültiger TCP-Port %q", path, cfg.Port)
+	}
+	return cfg, nil
 }
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
