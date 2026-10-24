@@ -1,5 +1,7 @@
 # LeaseEditor-Dnsmasq
 
+Die Weboberfläche heißt **LeaseEditor**. Der Versionshinweis rechts in der Kopfzeile verlinkt auf das [GitHub-Projekt](https://github.com/anonymous-writer/LeaseEditor-Dnsmasq).
+
 Eigenständiger Go-Webeditor für dnsmasq-DHCP-Reservierungen. Native Programmversion und Docker verwenden dieselbe `config.yaml`.
 
 ## Konfiguration
