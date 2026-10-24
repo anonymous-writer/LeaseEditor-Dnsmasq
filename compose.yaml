@@ -1,0 +1,14 @@
+services:
+  wlm-leaseeditor:
+    build: .
+    container_name: wlm-leaseeditor
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3010"
+      DNSMASQ_HOSTS_FILE: "/data/dnsmasq.dhcphosts"
+    volumes:
+      # Replace the host path with the real location of your dnsmasq.dhcphosts.
+      - /var/lib/dnsmasq/dnsmasq.dhcphosts:/data/dnsmasq.dhcphosts:rw
