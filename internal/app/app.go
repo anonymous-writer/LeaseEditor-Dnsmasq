@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"io/fs"
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -181,7 +181,7 @@ func readItems(path string) ([]Item, error) {
 		}
 		if strings.HasPrefix(trim, "#") {
 			decorative := strings.Trim(trim, "# -=_\t")
-			if decorative == "" {
+			if decorative == "" && len(trim) >= 5 {
 				continue
 			}
 			const marker = "# LeaseEditor-Gruppe:"
@@ -352,4 +352,3 @@ func saveAtomic(path string, data []byte) error {
 	return os.Rename(tmpName, abs)
 }
 func jsonEscape(s string) string { b, _ := json.Marshal(s); return strings.Trim(string(b), `"`) }
-
