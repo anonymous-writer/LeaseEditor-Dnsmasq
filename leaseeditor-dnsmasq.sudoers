@@ -1,0 +1,3 @@
+# Install as /etc/sudoers.d/leaseeditor-dnsmasq (mode 0440).
+# Allows the service account to restart only the dnsmasq systemd service.
+pi ALL=(root) NOPASSWD: /usr/bin/systemctl restart dnsmasq

@@ -11,7 +11,6 @@ WorkingDirectory=/home/pi/leaseeditor-dnsmasq
 ExecStart=/usr/bin/leaseeditor-dnsmasq --config /home/pi/leaseeditor-dnsmasq/config.yaml
 Restart=on-failure
 RestartSec=5
-NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ReadWritePaths=/var/lib/dnsmasq /home/pi/leaseeditor-dnsmasq
