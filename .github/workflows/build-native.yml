@@ -1,0 +1,105 @@
+name: Build native Linux binaries
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Go application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+  build:
+    name: Build Linux ${{ matrix.arch }} binary
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build standalone binary
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -trimpath -o "dist/leaseeditor-dnsmasq-linux-${GOARCH}" .
+
+      - name: Package binary
+        run: |
+          tar -czf "dist/leaseeditor-dnsmasq-linux-${{ matrix.arch }}.tar.gz" \
+            -C dist "leaseeditor-dnsmasq-linux-${{ matrix.arch }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: leaseeditor-dnsmasq-linux-${{ matrix.arch }}
+          path: dist/leaseeditor-dnsmasq-linux-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-assets:
+    name: Attach binaries to GitHub Release
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: leaseeditor-dnsmasq-linux-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum leaseeditor-dnsmasq-linux-*.tar.gz > SHA256SUMS
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            dist/leaseeditor-dnsmasq-linux-amd64.tar.gz \
+            dist/leaseeditor-dnsmasq-linux-arm64.tar.gz \
+            dist/SHA256SUMS \
+            --clobber
