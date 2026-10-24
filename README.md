@@ -45,3 +45,14 @@ go vet ./...
 ```
 
 Die Weboberfläche hat keine Anmeldung. Stelle sie nicht ungeschützt ins Internet und nutze sie nur in einem vertrauenswürdigen LAN oder hinter einer authentifizierten Reverse-Proxy-Lösung. Das Programm führt keinen dnsmasq-Neustart aus.
+
+
+## Projektstruktur und Versionsanzeige
+
+Analog zu LeaseLens: `main.go` ist der Einstiegspunkt, `internal/app/` enthält die Programmlogik, `templates/index.html` die Oberfläche und `static/app.css`, `static/app.js` und `static/icon.svg` die Web-Assets. Alle Webdateien sind in die native Binary eingebettet.
+
+Die Version erscheint als Link im vorhandenen Fußtext, nicht mehr als separate Statusbox. Standardmäßig `1.0.0-Beta`; Release-Builds können Version und Veröffentlichungsdatum setzen:
+
+```sh
+go build -ldflags "-X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildVersion=1.0.0-Beta -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildReleaseDate=2026-10-24" -o leaseeditor-dnsmasq .
+```
