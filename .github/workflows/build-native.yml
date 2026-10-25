@@ -2,6 +2,11 @@ name: Build native Linux binaries
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional existing release tag to rebuild; leave empty for GoDev"
+        required: false
+        type: string
   release:
     types: [published]
 
@@ -16,7 +21,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name || github.ref }}
+          ref: ${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -42,7 +47,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name || github.ref }}
+          ref: ${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -50,15 +55,48 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Set build metadata
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || '' }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease || false }}
+          RELEASE_PUBLISHED_AT: ${{ github.event.release.published_at || '' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          updated_at="$(date -u '+%d.%m.%y, %H:%M:%S UTC')"
+          if [[ -n "$RELEASE_TAG" ]]; then
+            version="${RELEASE_TAG#v}"
+            prerelease="$RELEASE_PRERELEASE"
+            published_at="$RELEASE_PUBLISHED_AT"
+            if [[ -z "$published_at" ]]; then
+              release_json="$(gh release view "$RELEASE_TAG" --json isPrerelease,publishedAt)"
+              prerelease="$(jq -r '.isPrerelease' <<< "$release_json")"
+              published_at="$(jq -r '.publishedAt' <<< "$release_json")"
+            fi
+            release_date="${published_at%%T*}"
+            if [[ "$prerelease" == "true" ]]; then channel="Beta"; else channel="Release"; fi
+          else
+            version="dev"; release_date=""; channel="GoDev"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "updated_at=$updated_at" >> "$GITHUB_OUTPUT"
+
       - name: Build standalone binary
         env:
           GOOS: linux
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: "0"
+          APP_VERSION: ${{ steps.metadata.outputs.version }}
+          APP_RELEASE_DATE: ${{ steps.metadata.outputs.release_date }}
+          APP_CHANNEL: ${{ steps.metadata.outputs.channel }}
+          APP_UPDATED_AT: ${{ steps.metadata.outputs.updated_at }}
         run: |
           set -euo pipefail
           mkdir -p dist
-          go build -trimpath -o "dist/leaseeditor-dnsmasq-linux-${GOARCH}" .
+          go build -trimpath -ldflags="-s -w -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildVersion=${APP_VERSION} -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildReleaseDate=${APP_RELEASE_DATE} -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildChannel=${APP_CHANNEL} -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildUpdatedAt=${APP_UPDATED_AT}" -o "dist/leaseeditor-dnsmasq-linux-${GOARCH}" .
 
       - name: Package binary
         run: |
@@ -75,7 +113,7 @@ jobs:
 
   publish-assets:
     name: Attach binaries to GitHub Release
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || inputs.release_tag != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -95,7 +133,7 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
           GH_REPO: ${{ github.repository }}
         run: |
           gh release upload "$RELEASE_TAG" \

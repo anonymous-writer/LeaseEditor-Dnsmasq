@@ -38,7 +38,7 @@ type Document struct {
 var macPattern = regexp.MustCompile(`(?i)^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
 var BuildVersion = "1.0.0-Beta"
 var BuildReleaseDate = ""
-var BuildChannel = "Dev · Native"
+var BuildChannel = "GoDev"
 var BuildUpdatedAt = ""
 
 type AppConfig struct {
