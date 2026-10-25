@@ -10,7 +10,6 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -52,7 +51,7 @@ func Run(assets fs.FS) {
 	flag.Parse()
 	cfg, err := loadConfig(*configPath)
 	if err != nil {
-		log.Fatalf("Konfiguration laden: %v", err)
+		LogFatalf("Konfiguration laden: %v", err)
 	}
 	hosts := cfg.HostsFile
 	page := template.Must(template.ParseFS(assets, "templates/index.html"))
@@ -68,13 +67,15 @@ func Run(assets fs.FS) {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := page.Execute(w, map[string]string{"HostsFile": hosts, "Version": BuildVersion, "ReleaseDate": BuildReleaseDate, "BuildChannel": BuildChannel, "UpdatedAt": BuildUpdatedAt}); err != nil {
-			log.Printf("render page: %v", err)
+			LogErrorf("render page: %v", err)
 		}
 	})
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 	server := &http.Server{Addr: addr, Handler: securityHeaders(mux), ReadHeaderTimeout: 5 * time.Second}
-	log.Printf("WLM LeaseEditor listening on %s; file=%s", addr, hosts)
-	log.Fatal(server.ListenAndServe())
+	LogInfof("LeaseEditor listening on %s; hosts_file=%s", addr, hosts)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		LogFatalf("HTTP server failed: %v", err)
+	}
 }
 
 // handleRestartDnsmasq performs only the fixed dnsmasq restart operation.
@@ -97,7 +98,7 @@ func handleRestartDnsmasq(w http.ResponseWriter, r *http.Request) {
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("dnsmasq restart failed: %v (%s)", err, strings.TrimSpace(string(output)))
+		LogErrorf("dnsmasq restart failed: %v (%s)", err, strings.TrimSpace(string(output)))
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Neustart fehlgeschlagen. Prüfe systemd und die sudoers-Berechtigung für LeaseEditor."})
 		return
@@ -156,9 +157,11 @@ func handleReservations(w http.ResponseWriter, r *http.Request, path string) {
 	case http.MethodGet:
 		items, err := readItems(path)
 		if err != nil {
+			LogErrorf("cannot read DHCP host file: %v", err)
 			http.Error(w, `{"error":"Datei konnte nicht gelesen werden: `+jsonEscape(err.Error())+`"}`, http.StatusInternalServerError)
 			return
 		}
+		LogDebugf("loaded %d DHCP host entries", len(items))
 		_ = json.NewEncoder(w).Encode(Document{Items: items})
 	case http.MethodPut:
 		if r.ContentLength > 2<<20 {
@@ -182,9 +185,11 @@ func handleReservations(w http.ResponseWriter, r *http.Request, path string) {
 			return
 		}
 		if err = saveAtomic(path, content); err != nil {
+			LogErrorf("saving DHCP host file failed: %v", err)
 			http.Error(w, `{"error":"Speichern fehlgeschlagen: `+jsonEscape(err.Error())+`"}`, http.StatusInternalServerError)
 			return
 		}
+		LogInfof("saved DHCP host file (%d bytes)", len(content))
 		w.WriteHeader(http.StatusNoContent)
 	default:
 		w.Header().Set("Allow", "GET, PUT")

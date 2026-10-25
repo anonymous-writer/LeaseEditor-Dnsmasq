@@ -37,6 +37,21 @@ docker compose up -d --build
 
 Compose bindet dieselbe `config.yaml` schreibgeschützt nach `/app/config.yaml` ein. Wenn du `port` änderst, passe auch das Port-Mapping in `compose.yaml` an.
 
+## Fehleranalyse und Log-Level
+
+LeaseEditor schreibt strukturierte Logmeldungen mit Zeitstempel und Schweregrad nach stdout (bei systemd über `journalctl`, bei Docker über `docker logs`). Das Mindest-Level wird über `LOG_LEVEL` eingestellt:
+
+| `LOG_LEVEL` | Standard | Beschreibung |
+| ----------- | -------- | ------------ |
+| `DEBUG` | | Detaillierte Diagnoseinformationen, z. B. Anzahl geladener DHCP-Hosteinträge |
+| `INFO` | Ja | Normale Betriebsinformationen und erfolgreiche Speichervorgänge |
+| `WARN` | | Warnungen, die geprüft werden sollten |
+| `ERROR` | | Fehler, bei denen ein Vorgang nicht abgeschlossen werden konnte |
+
+Ist `LOG_LEVEL` nicht gesetzt oder ungültig, wird `INFO` verwendet. Höhere Schweregrade bleiben immer sichtbar. Einzelne MAC-Adressen, Hostnamen und vollständige DHCP-Dateiinhalte werden nicht protokolliert.
+
+Docker Compose verwendet standardmäßig `LOG_LEVEL: "INFO"`. Für temporäre Diagnose kann dies in `compose.yaml` auf `DEBUG` gesetzt werden und der Container anschließend neu erstellt werden. Native Installation: `LOG_LEVEL=DEBUG` in der systemd-Service-Umgebung setzen und danach `sudo systemctl daemon-reload && sudo systemctl restart leaseeditor-dnsmasq` ausführen. Logs anzeigen: `journalctl -u leaseeditor-dnsmasq -f`. Docker-Logs: `docker compose logs -f`.
+
 ## Tests und Sicherheit
 
 ```bash
