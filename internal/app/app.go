@@ -44,6 +44,7 @@ type AppConfig struct {
 	HostsFile string
 	Host      string
 	Port      string
+	LogLevel  string
 }
 
 func Run(assets fs.FS) {
@@ -52,6 +53,10 @@ func Run(assets fs.FS) {
 	cfg, err := loadConfig(*configPath)
 	if err != nil {
 		LogFatalf("Konfiguration laden: %v", err)
+	}
+	// LOG_LEVEL environment variable takes precedence over the optional YAML key.
+	if _, set := os.LookupEnv("LOG_LEVEL"); !set {
+		SetLogLevel(cfg.LogLevel)
 	}
 	hosts := cfg.HostsFile
 	page := template.Must(template.ParseFS(assets, "templates/index.html"))
@@ -107,7 +112,7 @@ func handleRestartDnsmasq(w http.ResponseWriter, r *http.Request) {
 }
 
 func loadConfig(path string) (AppConfig, error) {
-	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009"}
+	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO"}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return cfg, fmt.Errorf("Datei %q nicht lesbar: %w", path, err)
@@ -133,6 +138,11 @@ func loadConfig(path string) (AppConfig, error) {
 			cfg.Host = value
 		case "port":
 			cfg.Port = value
+		case "log_level":
+			if !validLogLevel(value) {
+				return cfg, fmt.Errorf("%s:%d: ungültiger log_level %q (erlaubt: DEBUG, INFO, WARN, ERROR)", path, lineNo+1, value)
+			}
+			cfg.LogLevel = strings.ToUpper(value)
 		default:
 			return cfg, fmt.Errorf("%s:%d: unbekannter Parameter %q", path, lineNo+1, key)
 		}

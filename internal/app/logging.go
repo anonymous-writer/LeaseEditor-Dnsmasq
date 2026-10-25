@@ -37,6 +37,15 @@ func parseAppLogLevel(value string) appLogLevel {
 	}
 }
 
+func validLogLevel(value string) bool {
+	switch strings.ToUpper(strings.Trim(strings.TrimSpace(value), "\"'")) {
+	case "DEBUG", "INFO", "WARN", "ERROR":
+		return true
+	default:
+		return false
+	}
+}
+
 // SetLogLevel changes the minimum severity at runtime, primarily for tests.
 func SetLogLevel(value string) {
 	appLogMu.Lock()
