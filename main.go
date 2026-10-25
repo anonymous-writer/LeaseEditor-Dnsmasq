@@ -1,8 +1,8 @@
 package main
 
 import (
-    "embed"
-    "github.com/anonymous-writer/wlm-leaseeditor/internal/app"
+	"embed"
+	"github.com/anonymous-writer/wlm-leaseeditor/internal/app"
 )
 
 //go:embed templates/index.html static/*
