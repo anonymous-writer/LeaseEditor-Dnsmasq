@@ -3,6 +3,8 @@ services:
     build: .
     container_name: leaseeditor-dnsmasq
     restart: unless-stopped
+    environment:
+      LOG_LEVEL: "INFO"
     ports:
       - "3009:3009"
     volumes:
