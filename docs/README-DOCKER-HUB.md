@@ -7,6 +7,8 @@ LeaseEditor-Dnsmasq is a lightweight Go web application for editing static DHCP 
 **Source code:** https://github.com/anonymous-writer/LeaseEditor-Dnsmasq  
 **License:** MIT — see [LICENSE](https://github.com/anonymous-writer/LeaseLens-Dnsmasq/blob/main/LICENSE).
 
+![Screenshot](https://raw.githubusercontent.com/anonymous-writer/leaseeditor-dnsmasq/main/docs/screenshot1.png)
+
 ## Features
 
 - Add, edit, and delete static DHCP reservations.
