@@ -64,7 +64,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          updated_at="$(date -u '+%d.%m.%y, %H:%M:%S UTC')"
+          updated_at="$(date -u '+%d.%m.%y-%H:%M:%S-UTC')"
           if [[ -n "$RELEASE_TAG" ]]; then
             version="${RELEASE_TAG#v}"
             prerelease="$RELEASE_PRERELEASE"
