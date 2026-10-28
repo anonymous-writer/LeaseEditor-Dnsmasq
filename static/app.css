@@ -44,3 +44,47 @@ body.light-theme header{background:linear-gradient(110deg,#e4effb,#d9eaff 55%,#e
 
 /* Kommentar-Drag-and-drop und Sichtbarkeitsschalter */
 .comment-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);white-space:nowrap;cursor:pointer}.comment-toggle input{width:17px;height:17px;margin:0;accent-color:var(--blue)}.comment-row.dragging-comment{opacity:.35}.comment-drop-placeholder td{height:52px;padding:0!important;background:#153d61!important;border:2px dashed #59b8f5!important;position:relative}.comment-drop-placeholder td:after{content:"";display:block;height:4px;margin:0 12px;background:#59b8f5;border-radius:4px;box-shadow:0 0 12px #59b8f588}.comment-row.drop-before td{border-top:3px solid #59b8f5!important}.comment-row.drop-after td{border-bottom:3px solid #59b8f5!important}body.light-theme .comment-drop-placeholder td{background:#d9ecff!important}
+
+/* Kompakter, konsistenter Kommentare-Schalter */
+.comment-toggle{
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:8px 12px;
+  min-height:40px;
+  width:auto;
+  flex:0 0 auto;
+  border:1px solid #354b67;
+  border-radius:8px;
+  background:var(--panel);
+  color:var(--text);
+  white-space:nowrap;
+  cursor:pointer;
+}
+.comment-toggle input{
+  appearance:auto;
+  -webkit-appearance:checkbox;
+  flex:0 0 16px;
+  width:16px;
+  height:16px;
+  min-width:16px;
+  margin:0;
+  padding:0;
+  accent-color:var(--blue);
+}
+.comment-toggle span{line-height:1.2}
+.comment-toggle:hover{border-color:var(--cyan)}
+.comment-drop-placeholder td{
+  height:30px!important;
+  min-height:30px;
+  padding:0!important;
+  background:#153d61!important;
+  border-top:2px solid #59b8f5!important;
+  border-bottom:2px solid #59b8f5!important;
+  transition:height .12s ease,background-color .12s ease;
+}
+.comment-drop-placeholder td:after{height:3px!important}
+.comment-row.drop-before td{border-top:3px solid #59b8f5!important}
+.comment-row.drop-after td{border-bottom:3px solid #59b8f5!important}

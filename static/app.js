@@ -19,11 +19,76 @@ function render(){
  refreshGroups();const q=$('search').value.toLowerCase(),filter=$('groupFilter').value,tbody=$('rows');tbody.innerHTML='';let visible=0,lastRenderedGroup=null;items.forEach((it,i)=>{if(it.kind==='entry'){it.group=it.group||'Nicht zugeordnet';const hay=[it.mac,it.ipv4,it.ipv6,it.hostname,it.lease,it.group].join(' ').toLowerCase();if((q&&!hay.includes(q))||(filter&&it.group!==filter))return;visible++;if(it.group!==lastRenderedGroup){const heading=document.createElement('tr');heading.className='group-heading';heading.innerHTML='<td colspan="7"><span class="group-pill">'+esc(it.group)+'</span></td>';tbody.appendChild(heading);lastRenderedGroup=it.group;}const tr=document.createElement('tr');tr.className='group-row';tr.dataset.itemIndex=i;tr.innerHTML='<td>'+esc(it.mac)+'</td><td>'+esc(it.ipv4)+'</td><td>'+esc(it.ipv6)+'</td><td>'+esc(it.hostname)+'</td><td>'+esc(it.lease)+'</td><td class="group-cell"><select aria-label="Gruppe ändern" data-group="'+i+'">'+groups.map(g=>'<option '+(g===it.group?'selected':'')+' value="'+esc(g)+'">'+esc(groupLabel(g))+'</option>').join('')+'</select></td><td class="actions"><button class="btn" data-edit="'+i+'">Bearbeiten</button><button class="btn danger" data-del="'+i+'">Löschen</button></td>';tbody.appendChild(tr);}else{const raw=it.raw||'';if(it.kind==='blank')return;if(it.kind==='comment'&&!$('showComments').checked)return;if(it.kind==='comment'&&raw.trim().startsWith('# LeaseEditor-Gruppe:'))return;if(it.kind==='comment'&&/^[#\s=_-]+$/.test(raw.trim())&&raw.trim().length>=5)return;if(q&&!raw.toLowerCase().includes(q))return;const tr=document.createElement('tr');tr.className=it.kind==='comment'?'comment-row':'section';tr.dataset.itemIndex=i;if(it.kind==='comment')tr.draggable=true;const label=it.kind==='blank'?'':esc(raw);const controls=it.kind==='comment'?'<td><div class="comment-actions"><button class="btn comment-move" data-move-comment-up="'+i+'" title="Kommentar nach oben verschieben" aria-label="Kommentar nach oben verschieben">↑</button><button class="btn comment-move" data-move-comment-down="'+i+'" title="Kommentar nach unten verschieben" aria-label="Kommentar nach unten verschieben">↓</button><button class="btn" data-edit-comment="'+i+'">Bearbeiten</button><button class="btn danger" data-del-comment="'+i+'">Kommentar löschen</button></div></td>':'';tr.innerHTML='<td colspan="'+(it.kind==='comment'?'6':'7')+'">'+label+(it.kind==='raw'?(rowText[langSelect?.value||'de']||rowText.de).unknown:'')+'</td>'+controls;tbody.appendChild(tr);}});$('empty').hidden=visible!==0;const ct=uiText[langSelect?.value||'de']||uiText.de;$('count').textContent=visible+' '+ct.count+' · '+groups.length+' '+ct.groups;applyDynamicLabels();}
 async function load(){if(dirty&&!await askConfirm(dt('discard')))return;try{const r=await fetch('/api/reservations');if(!r.ok)throw new Error(await r.text());const d=await r.json();items=d.items||[];groups=[...new Set(['Nicht zugeordnet',...items.filter(x=>x.kind==='entry').map(x=>x.group||'Nicht zugeordnet')])];dirty=false;$('save').textContent=(uiText[langSelect?.value||'de']||uiText.de).save;render();status((uiText[langSelect.value]||uiText.de).loaded,'ok');}catch(e){status((uiText[langSelect.value]||uiText.de).loadFailed+e.message,'err');}}
 let draggedCommentIndex=null,dropPlaceholder=null,dropBefore=true,dropTargetIndex=null;
-function clearDropMarker(){if(dropPlaceholder){dropPlaceholder.remove();dropPlaceholder=null;}document.querySelectorAll('.drop-before,.drop-after').forEach(r=>r.classList.remove('drop-before','drop-after'));}
-$('rows').addEventListener('dragstart',e=>{const row=e.target.closest('tr.comment-row[draggable="true"]');if(!row)return;draggedCommentIndex=Number(row.dataset.itemIndex);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(draggedCommentIndex));row.classList.add('dragging-comment');dropPlaceholder=document.createElement('tr');dropPlaceholder.className='comment-drop-placeholder';dropPlaceholder.innerHTML='<td colspan="7"></td>';});
-$('rows').addEventListener('dragover',e=>{if(draggedCommentIndex===null||!dropPlaceholder)return;const target=e.target.closest('tr[data-item-index]');if(!target||target.classList.contains('dragging-comment'))return;e.preventDefault();e.dataTransfer.dropEffect='move';const rect=target.getBoundingClientRect();dropBefore=e.clientY<rect.top+rect.height/2;dropTargetIndex=Number(target.dataset.itemIndex);clearDropMarker();dropPlaceholder=document.createElement('tr');dropPlaceholder.className='comment-drop-placeholder';dropPlaceholder.innerHTML='<td colspan="7"></td>';if(dropBefore){target.parentNode.insertBefore(dropPlaceholder,target);target.classList.add('drop-after');}else{target.parentNode.insertBefore(dropPlaceholder,target.nextSibling);target.classList.add('drop-before');}});
-$('rows').addEventListener('drop',e=>{if(draggedCommentIndex===null||!dropPlaceholder)return;e.preventDefault();const to=dropTargetIndex;const before=dropBefore;const from=draggedCommentIndex;clearDropMarker();draggedCommentIndex=null;dropTargetIndex=null;if(to===null||from===to||!items[from]||items[from].kind!=='comment'){render();return;}const [moved]=items.splice(from,1);let insertAt=to;if(from<to)insertAt--;if(!before)insertAt++;insertAt=Math.max(0,Math.min(items.length,insertAt));items.splice(insertAt,0,moved);markDirty();render();});
-$('rows').addEventListener('dragend',()=>{draggedCommentIndex=null;dropTargetIndex=null;clearDropMarker();document.querySelectorAll('.dragging-comment').forEach(row=>row.classList.remove('dragging-comment'));});
+function clearDropMarker(removePlaceholder=true){
+  if(removePlaceholder&&dropPlaceholder){dropPlaceholder.remove();dropPlaceholder=null;}
+  document.querySelectorAll('.drop-before,.drop-after').forEach(r=>r.classList.remove('drop-before','drop-after'));
+}
+function makeDropPlaceholder(){
+  const row=document.createElement('tr');
+  row.className='comment-drop-placeholder';
+  row.innerHTML='<td colspan="7"></td>';
+  return row;
+}
+$('rows').addEventListener('dragstart',e=>{
+  const row=e.target.closest('tr.comment-row[draggable="true"]');
+  if(!row)return;
+  draggedCommentIndex=Number(row.dataset.itemIndex);
+  dropTargetIndex=null;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',String(draggedCommentIndex));
+  row.classList.add('dragging-comment');
+  dropPlaceholder=makeDropPlaceholder();
+});
+$('rows').addEventListener('dragover',e=>{
+  if(draggedCommentIndex===null)return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  const target=e.target.closest('tr[data-item-index]');
+  if(!target||target.classList.contains('dragging-comment')){
+    dropTargetIndex=null;
+    clearDropMarker(false);
+    if(dropPlaceholder&&dropPlaceholder.parentNode)dropPlaceholder.remove();
+    return;
+  }
+  const targetIndex=Number(target.dataset.itemIndex);
+  if(!Number.isInteger(targetIndex)){dropTargetIndex=null;return;}
+  dropTargetIndex=targetIndex;
+  const rect=target.getBoundingClientRect();
+  dropBefore=e.clientY<rect.top+rect.height/2;
+  clearDropMarker(false);
+  if(!dropPlaceholder)dropPlaceholder=makeDropPlaceholder();
+  if(dropBefore){
+    target.parentNode.insertBefore(dropPlaceholder,target);
+    target.classList.add('drop-before');
+  }else{
+    target.parentNode.insertBefore(dropPlaceholder,target.nextSibling);
+    target.classList.add('drop-after');
+  }
+});
+$('rows').addEventListener('drop',e=>{
+  if(draggedCommentIndex===null)return;
+  e.preventDefault();
+  const from=draggedCommentIndex,to=dropTargetIndex,before=dropBefore;
+  clearDropMarker();
+  draggedCommentIndex=null;
+  dropTargetIndex=null;
+  document.querySelectorAll('.dragging-comment').forEach(row=>row.classList.remove('dragging-comment'));
+  if(to===null||from===to||!items[from]||items[from].kind!=='comment'){render();return;}
+  const [moved]=items.splice(from,1);
+  let insertAt=to;
+  if(from<to)insertAt--;
+  if(!before)insertAt++;
+  insertAt=Math.max(0,Math.min(items.length,insertAt));
+  items.splice(insertAt,0,moved);
+  markDirty();
+  render();
+});
+$('rows').addEventListener('dragend',()=>{
+  draggedCommentIndex=null;
+  dropTargetIndex=null;
+  clearDropMarker();
+  document.querySelectorAll('.dragging-comment').forEach(row=>row.classList.remove('dragging-comment'));
+});
 $('rows').addEventListener('change',e=>{const sel=e.target.closest('[data-group]');if(sel){items[Number(sel.dataset.group)].group=sel.value;markDirty();render();}});$('rows').addEventListener('click',async e=>{const ed=e.target.closest('[data-edit]'),del=e.target.closest('[data-del]'),ec=e.target.closest('[data-edit-comment]'),dc=e.target.closest('[data-del-comment]'),mu=e.target.closest('[data-move-comment-up]'),md=e.target.closest('[data-move-comment-down]');if(mu||md){const i=Number((mu||md).dataset[mu?'moveCommentUp':'moveCommentDown']),to=i+(mu?-1:1);if(to>=0&&to<items.length){const [moved]=items.splice(i,1);items.splice(to,0,moved);markDirty();render();}}if(ed)showModal(Number(ed.dataset.edit));if(del){const i=Number(del.dataset.del);if(await askConfirm(dt('removeReservation'))){items.splice(i,1);markDirty();render();}}if(ec){const i=Number(ec.dataset.editComment),it=items[i];const value=await askPrompt(dt('editComment'),it.raw||'#');if(value===null)return;const v=value.trim();if(!v.startsWith('#')){await inform(dt('commentHash'));return;}it.raw=v;markDirty();render();}if(dc){const i=Number(dc.dataset.delComment);if(await askConfirm(dt('removeComment'))){items.splice(i,1);markDirty();render();}}});
 $('addComment').onclick=async()=>{const value=await askPrompt(dt('newComment'),'# -');if(value===null)return;let v=value.trim();if(!v.startsWith('#')){await inform(dt('commentHash'));return;}if(v==='#')v='# ';items.unshift({kind:'comment',raw:v});markDirty();render();status((uiText[langSelect.value]||uiText.de).commentAdded,'ok');};
 $('form').addEventListener('submit',e=>{e.preventDefault();const it={kind:'entry',mac:$('mac').value.trim(),ipv4:$('ipv4').value.trim(),ipv6:$('ipv6').value.trim(),hostname:$('hostname').value.trim(),lease:$('lease').value.trim(),group:$('group').value||'Nicht zugeordnet'};if(editing>=0)items[editing]=it;else items.push(it);markDirty();hideModal();render();});
