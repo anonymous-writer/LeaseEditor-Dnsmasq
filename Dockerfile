@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS build
+FROM golang:1.27-alpine AS build
 WORKDIR /src
 ARG APP_VERSION=dev
 ARG APP_RELEASE_DATE=
