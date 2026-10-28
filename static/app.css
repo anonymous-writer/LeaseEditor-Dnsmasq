@@ -88,3 +88,6 @@ body.light-theme header{background:linear-gradient(110deg,#e4effb,#d9eaff 55%,#e
 .comment-drop-placeholder td:after{height:3px!important}
 .comment-row.drop-before td{border-top:3px solid #59b8f5!important}
 .comment-row.drop-after td{border-bottom:3px solid #59b8f5!important}
+
+/* Gruppen per Pfeil oder Drag-and-drop sortieren */
+.group-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.group-order-actions{display:flex;align-items:center;gap:5px}.group-move{padding:3px 9px!important;min-width:32px;line-height:1.3}.group-heading[draggable="true"]{cursor:grab}.group-heading.dragging-group{opacity:.4}.group-heading.group-drop-before td{border-top:3px solid #59b8f5!important}.group-heading.group-drop-after td{border-bottom:3px solid #59b8f5!important}.group-drag-hint{font-size:18px;letter-spacing:-4px;color:#9fc9ed;padding:0 5px;cursor:grab;user-select:none}body.light-theme .group-drag-hint{color:#50769b}
