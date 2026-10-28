@@ -41,3 +41,6 @@ body.light-theme header{background:linear-gradient(110deg,#e4effb,#d9eaff 55%,#e
 
 /* Kommentare lassen sich per Maus per Drag-and-drop verschieben. */
 .comment-row[draggable="true"]{cursor:grab}.comment-row[draggable="true"]:active{cursor:grabbing}.comment-row.dragging-comment{opacity:.45}.comment-row[draggable="true"] td:first-child{user-select:none}
+
+/* Kommentar-Drag-and-drop und Sichtbarkeitsschalter */
+.comment-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);white-space:nowrap;cursor:pointer}.comment-toggle input{width:17px;height:17px;margin:0;accent-color:var(--blue)}.comment-row.dragging-comment{opacity:.35}.comment-drop-placeholder td{height:52px;padding:0!important;background:#153d61!important;border:2px dashed #59b8f5!important;position:relative}.comment-drop-placeholder td:after{content:"";display:block;height:4px;margin:0 12px;background:#59b8f5;border-radius:4px;box-shadow:0 0 12px #59b8f588}.comment-row.drop-before td{border-top:3px solid #59b8f5!important}.comment-row.drop-after td{border-bottom:3px solid #59b8f5!important}body.light-theme .comment-drop-placeholder td{background:#d9ecff!important}
