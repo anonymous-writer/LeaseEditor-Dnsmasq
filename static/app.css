@@ -9,3 +9,32 @@ body.light-theme{color-scheme:light;--bg:#f3f6fb;--panel:#fff;--panel2:#e9eff7;-
 .restart-dnsmasq{background:#2a202b;border-color:#793744;color:#ff6478}.restart-dnsmasq:hover{background:#3a202d;border-color:#e05268}.restart-dnsmasq:disabled{opacity:.55;cursor:wait}
 
 .app-dialog-backdrop{z-index:10000}.app-dialog{width:min(460px,100%)}.app-dialog p{white-space:pre-wrap;margin:0;color:var(--text)}.app-dialog input[hidden]{display:none}
+
+/* LeaseLens-aligned visual refresh */
+:root{--bg:#081426;--panel:#0f2038;--panel2:#142b49;--line:#263f60;--text:#eaf4ff;--muted:#9bb2ce;--blue:#168cff;--cyan:#63dcff;--red:#f05c70;--focus:#65cfff}
+body{font-size:14px;line-height:1.5;background:radial-gradient(ellipse at 50% -20%,#153963 0%,var(--bg) 56%);background-attachment:fixed}
+header{position:relative;gap:20px;padding:18px clamp(16px,3vw,38px);min-height:98px;background:linear-gradient(110deg,#0b1b31 0%,#102947 55%,#0b1b31 100%);border-bottom:1px solid #2a527b;box-shadow:0 8px 28px #02081755}
+header:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,#168cff,#63dcff,#168cff,transparent);opacity:.65}
+header img{width:56px;height:64px;filter:drop-shadow(0 3px 9px #168cff33)}
+h1{font-size:clamp(28px,2.3vw,36px);letter-spacing:-.8px}
+h1 .brand-accent{background:linear-gradient(100deg,#65dfff,#2587ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+header p{font-size:14px;color:#c8dcf5;letter-spacing:.01em}.tagline{letter-spacing:.015em}
+main{max-width:1600px;margin:26px auto;padding:0 clamp(12px,2vw,28px) 80px}
+.warning{background:#332b19;border-color:#78602a;color:#ffe6a6;box-shadow:inset 3px 0 #e6b84d}
+.toolbar,.groupbar{gap:8px}.toolbar{padding:12px;background:color-mix(in srgb,var(--panel) 82%,transparent);border:1px solid var(--line);border-radius:13px;box-shadow:0 8px 26px #02081722}
+.toolbar input{min-width:240px;min-height:40px}.btn{border:1px solid #385577;border-radius:9px;background:linear-gradient(180deg,#193451,#122842);padding:9px 13px;min-height:38px;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s}
+.btn:hover:not(:disabled){border-color:#56bfff;background:linear-gradient(180deg,#214a70,#173553);box-shadow:0 3px 12px #168cff22;transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(0)}.btn.primary{background:linear-gradient(135deg,#168cff,#155ce7);border-color:#4cbcff;color:white;box-shadow:0 3px 12px #168cff33}.btn.primary:hover:not(:disabled){background:linear-gradient(135deg,#39baff,#246fff)}
+.btn.danger,.restart-dnsmasq{background:#2a1c2a;border-color:#784052;color:#ffb8c5}.restart-dnsmasq:hover:not(:disabled){background:#482337;border-color:#e16c8a}
+input,select{background:#0a192d;border-color:#2d486a;border-radius:9px;min-height:38px}input:focus,select:focus,.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.groupbar{padding:3px 2px 8px}.groupbar label{color:var(--muted);font-weight:600}.groupbar select{min-height:38px}
+.meta{font-size:12px;margin:12px 2px 14px}.meta code{color:#8edbff}
+.table-wrap{border:1px solid #2a4669;border-radius:14px;box-shadow:0 14px 36px #02081730;background:var(--panel)}table{min-width:1000px}th{background:#152d4a;color:#b8d5f2;font-size:10px;letter-spacing:.09em;padding:13px 12px;border-bottom:1px solid #355778}td{padding:11px 12px;border-bottom:1px solid #233a57}tbody tr:not(.section):not(.group-heading):hover td{background:#18345366}
+.group-heading td{background:linear-gradient(90deg,#123d68,#112b4a);color:#e5f5ff;border-top:1px solid #258bdf;border-bottom:1px solid #2b76b4;padding:13px 14px}.group-heading td:first-child{border-left:4px solid #55d5ff}.group-heading .group-pill{background:#1765a1;border-color:#3daeff;border-radius:7px;padding:5px 12px}
+.group-pill{background:#153d61;border-color:#2b78b6;color:#c9ecff;border-radius:7px}.group-row td{background:#0d2038}.comment-row td{background:#13253b}.comment-row td:first-child{border-left-color:#5281ad}
+.actions button,.comment-actions button{border-radius:7px}.status{border:1px solid transparent}.status.ok{border-color:#21765e}.status.err{border-color:#8b3548}
+.modal-backdrop{backdrop-filter:blur(5px);background:#020817b8}.modal{border-color:#315477;border-radius:16px;padding:24px;box-shadow:0 24px 90px #0009,0 0 0 1px #63dcff0b}.modal h2{letter-spacing:-.3px}.field label{font-weight:600}.modal-actions{padding-top:14px;border-top:1px solid var(--line)}
+.foot{border-top:1px solid var(--line);padding-top:14px;line-height:1.7}.footer-version{color:#69cfff}
+body.light-theme{--bg:#edf4fc;--panel:#fff;--panel2:#e7f0fa;--line:#cfdeee;--text:#172b43;--muted:#607993;--blue:#147be8;--cyan:#087ebc;--red:#d73d55;background:linear-gradient(180deg,#e3effc 0%,#f5f8fc 240px);background-attachment:fixed}
+body.light-theme header{background:linear-gradient(110deg,#e4effb,#d9eaff 55%,#eaf3fc);border-bottom-color:#bfd8ef;box-shadow:0 8px 24px #1b4c7810}body.light-theme header p{color:#365574}body.light-theme .toolbar{background:#ffffffc9;border-color:#cbdced;box-shadow:0 8px 24px #2550800d}body.light-theme .btn{background:linear-gradient(180deg,#fff,#eaf2fb);border-color:#b8cde2;color:#1a3655}body.light-theme .btn.primary{background:linear-gradient(135deg,#168cff,#155ce7);border-color:#258cff;color:white}body.light-theme .btn.danger,body.light-theme .restart-dnsmasq{background:#fff0f3;border-color:#e8b7c2;color:#9e3048}body.light-theme input,body.light-theme select{background:#fff;border-color:#c1d3e6}body.light-theme th{background:#e4effb;color:#345371}body.light-theme td{border-bottom-color:#e0e9f3}body.light-theme tbody tr:not(.section):not(.group-heading):hover td{background:#eaf5ff}body.light-theme .group-heading td{background:linear-gradient(90deg,#d9ecff,#e8f4ff);color:#153e67;border-color:#a5d4fb}body.light-theme .group-heading .group-pill{background:#d0eaff;border-color:#8dc8f5;color:#174d7d}body.light-theme .group-row td{background:#f4f8fd}body.light-theme .comment-row td{background:#edf4fb}body.light-theme .modal{border-color:#c4d8ec;box-shadow:0 24px 80px #163c621f}body.light-theme .restart-dnsmasq:hover:not(:disabled){background:#ffe2e8}
+@media(max-width:700px){header{min-height:auto;padding:14px 16px}header img{width:46px;height:54px}header .repo-status{margin-left:0}main{margin:16px auto}.toolbar{padding:9px}.toolbar input{flex-basis:100%;min-width:0}.toolbar .btn{flex:1}.groupbar select{flex:1;min-width:130px}}
