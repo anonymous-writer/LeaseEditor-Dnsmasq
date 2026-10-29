@@ -98,3 +98,13 @@ body.light-theme header{background:linear-gradient(110deg,#e4effb,#d9eaff 55%,#e
 .group-row.duplicate-entry:hover td{background:#5a2633!important}
 body.light-theme .group-row.duplicate-entry td{background:#fff0f1!important;border-color:#e7a6af}
 body.light-theme .group-row.duplicate-entry td:first-child{border-left-color:#d73d55!important}
+/* Geräte innerhalb derselben Gruppe per Pfeil oder Drag-and-drop sortieren */
+.group-row[draggable="true"]{cursor:grab}
+.group-row[draggable="true"]:active{cursor:grabbing}
+.group-row.dragging-entry{opacity:.4}
+.group-row.entry-drop-before td{border-top:3px solid #59b8f5!important}
+.group-row.entry-drop-after td{border-bottom:3px solid #59b8f5!important}
+.entry-actions{display:flex;align-items:center;gap:4px}
+.entry-actions .entry-move{padding:4px 7px;min-width:28px;line-height:1.2}
+.entry-drag-hint{font-size:17px;letter-spacing:-4px;color:#9fc9ed;padding:0 4px;cursor:grab;user-select:none}
+body.light-theme .entry-drag-hint{color:#50769b}
