@@ -9,6 +9,9 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function groupLabel(g){const l=langSelect?.value||'de';return g==='Nicht zugeordnet'?(l==='en'?'Unassigned':l==='es'?'Sin asignar':g):g;}
 function refreshGroups(){const found=items.filter(x=>x.kind==='entry').map(x=>x.group||'Nicht zugeordnet');groups=[...new Set([...groups,'Nicht zugeordnet',...found])].filter(Boolean);for(const id of ['groupFilter','group']){const el=$(id),old=el.value;el.innerHTML=(id==='groupFilter'?'<option value="">Alle Gruppen</option>':'')+groups.map(g=>'<option value="'+esc(g)+'">'+esc(groupLabel(g))+'</option>').join('');if([...el.options].some(o=>o.value===old))el.value=old;}}
 function render(){
+ // Duplikate sichtbar markieren, damit sie nicht nur in einem Dialog erscheinen.
+ const duplicateIndexes=new Set();
+ for(const d of findDuplicateEntries()){for(const it of d.matches){const idx=items.indexOf(it);if(idx>=0)duplicateIndexes.add(idx);}}
  // Die Gruppenliste ist die kanonische Reihenfolge. Geräte werden in ihren
  // bestehenden Array-Slots nach dieser Reihenfolge sortiert, damit Aktionen
  // und Kommentare ihre gültigen Indizes behalten.
@@ -17,21 +20,49 @@ function render(){
  items.forEach((it,i)=>{if(it.kind==='entry'){entrySlots.push(i);entries.push(it);}});
  entries.sort((a,b)=>(groupOrder.get(a.group||'Nicht zugeordnet')??9999)-(groupOrder.get(b.group||'Nicht zugeordnet')??9999));
  entrySlots.forEach((slot,i)=>{items[slot]=entries[i];});
- const q=$('search').value.toLowerCase(),filter=$('groupFilter').value,tbody=$('rows');tbody.innerHTML='';let visible=0,lastRenderedGroup=null;items.forEach((it,i)=>{if(it.kind==='entry'){it.group=it.group||'Nicht zugeordnet';const hay=[it.mac,it.ipv4,it.ipv6,it.hostname,it.lease,it.group].join(' ').toLowerCase();if((q&&!hay.includes(q))||(filter&&it.group!==filter))return;visible++;if(it.group!==lastRenderedGroup){const heading=document.createElement('tr');heading.className='group-heading';heading.draggable=true;heading.dataset.groupName=it.group;heading.innerHTML='<td colspan="7"><div class="group-title"><span class="group-pill">'+esc(it.group)+'</span><div class="group-order-actions"><button type="button" class="btn group-move" data-move-group-up="'+esc(it.group)+'" title="">↑</button><button type="button" class="btn group-move" data-move-group-down="'+esc(it.group)+'" title="">↓</button><span class="group-drag-hint" aria-hidden="true">⋮⋮</span></div></div></td>';tbody.appendChild(heading);lastRenderedGroup=it.group;}const tr=document.createElement('tr');tr.className='group-row';tr.dataset.itemIndex=i;tr.innerHTML='<td>'+esc(it.mac)+'</td><td>'+esc(it.ipv4)+'</td><td>'+esc(it.ipv6)+'</td><td>'+esc(it.hostname)+'</td><td>'+esc(it.lease)+'</td><td class="group-cell"><select aria-label="Gruppe ändern" data-group="'+i+'">'+groups.map(g=>'<option '+(g===it.group?'selected':'')+' value="'+esc(g)+'">'+esc(groupLabel(g))+'</option>').join('')+'</select></td><td class="actions"><button class="btn" data-edit="'+i+'">Bearbeiten</button><button class="btn danger" data-del="'+i+'">Löschen</button></td>';tbody.appendChild(tr);}else{const raw=it.raw||'';if(it.kind==='blank')return;if(it.kind==='comment'&&!$('showComments').checked)return;if(it.kind==='comment'&&raw.trim().startsWith('# LeaseEditor-Gruppe:'))return;if(it.kind==='comment'&&/^[#\s=_-]+$/.test(raw.trim())&&raw.trim().length>=5)return;if(q&&!raw.toLowerCase().includes(q))return;const tr=document.createElement('tr');tr.className=it.kind==='comment'?'comment-row':'section';tr.dataset.itemIndex=i;if(it.kind==='comment')tr.draggable=true;const label=it.kind==='blank'?'':esc(raw);const controls=it.kind==='comment'?'<td><div class="comment-actions"><button class="btn comment-move" data-move-comment-up="'+i+'" title="Kommentar nach oben verschieben" aria-label="Kommentar nach oben verschieben">↑</button><button class="btn comment-move" data-move-comment-down="'+i+'" title="Kommentar nach unten verschieben" aria-label="Kommentar nach unten verschieben">↓</button><button class="btn" data-edit-comment="'+i+'">Bearbeiten</button><button class="btn danger" data-del-comment="'+i+'">Kommentar löschen</button></div></td>':'';tr.innerHTML='<td colspan="'+(it.kind==='comment'?'6':'7')+'">'+label+(it.kind==='raw'?(rowText[langSelect?.value||'de']||rowText.de).unknown:'')+'</td>'+controls;tbody.appendChild(tr);}});$('empty').hidden=visible!==0;const ct=uiText[langSelect?.value||'de']||uiText.de;$('count').textContent=visible+' '+ct.count+' · '+groups.length+' '+ct.groups;applyDynamicLabels();}
+ const q=$('search').value.toLowerCase(),filter=$('groupFilter').value,tbody=$('rows');tbody.innerHTML='';let visible=0,lastRenderedGroup=null;items.forEach((it,i)=>{if(it.kind==='entry'){it.group=it.group||'Nicht zugeordnet';const hay=[it.mac,it.ipv4,it.ipv6,it.hostname,it.lease,it.group].join(' ').toLowerCase();if((q&&!hay.includes(q))||(filter&&it.group!==filter))return;visible++;if(it.group!==lastRenderedGroup){const heading=document.createElement('tr');heading.className='group-heading';heading.draggable=true;heading.dataset.groupName=it.group;heading.innerHTML='<td colspan="7"><div class="group-title"><span class="group-pill">'+esc(it.group)+'</span><div class="group-order-actions"><button type="button" class="btn group-move" data-move-group-up="'+esc(it.group)+'" title="">↑</button><button type="button" class="btn group-move" data-move-group-down="'+esc(it.group)+'" title="">↓</button><span class="group-drag-hint" aria-hidden="true">⋮⋮</span></div></div></td>';tbody.appendChild(heading);lastRenderedGroup=it.group;}const tr=document.createElement('tr');tr.className='group-row'+(duplicateIndexes.has(i)?' duplicate-entry':'');tr.dataset.itemIndex=i;if(duplicateIndexes.has(i))tr.title=duplicateRowTitle(i);tr.innerHTML='<td>'+esc(it.mac)+'</td><td>'+esc(it.ipv4)+'</td><td>'+esc(it.ipv6)+'</td><td>'+esc(it.hostname)+'</td><td>'+esc(it.lease)+'</td><td class="group-cell"><select aria-label="Gruppe ändern" data-group="'+i+'">'+groups.map(g=>'<option '+(g===it.group?'selected':'')+' value="'+esc(g)+'">'+esc(groupLabel(g))+'</option>').join('')+'</select></td><td class="actions"><button class="btn" data-edit="'+i+'">Bearbeiten</button><button class="btn danger" data-del="'+i+'">Löschen</button></td>';tbody.appendChild(tr);}else{const raw=it.raw||'';if(it.kind==='blank')return;if(it.kind==='comment'&&!$('showComments').checked)return;if(it.kind==='comment'&&raw.trim().startsWith('# LeaseEditor-Gruppe:'))return;if(it.kind==='comment'&&/^[#\s=_-]+$/.test(raw.trim())&&raw.trim().length>=5)return;if(q&&!raw.toLowerCase().includes(q))return;const tr=document.createElement('tr');tr.className=it.kind==='comment'?'comment-row':'section';tr.dataset.itemIndex=i;if(it.kind==='comment')tr.draggable=true;const label=it.kind==='blank'?'':esc(raw);const controls=it.kind==='comment'?'<td><div class="comment-actions"><button class="btn comment-move" data-move-comment-up="'+i+'" title="Kommentar nach oben verschieben" aria-label="Kommentar nach oben verschieben">↑</button><button class="btn comment-move" data-move-comment-down="'+i+'" title="Kommentar nach unten verschieben" aria-label="Kommentar nach unten verschieben">↓</button><button class="btn" data-edit-comment="'+i+'">Bearbeiten</button><button class="btn danger" data-del-comment="'+i+'">Kommentar löschen</button></div></td>':'';tr.innerHTML='<td colspan="'+(it.kind==='comment'?'6':'7')+'">'+label+(it.kind==='raw'?(rowText[langSelect?.value||'de']||rowText.de).unknown:'')+'</td>'+controls;tbody.appendChild(tr);}});$('empty').hidden=visible!==0;const ct=uiText[langSelect?.value||'de']||uiText.de;$('count').textContent=visible+' '+ct.count+' · '+groups.length+' '+ct.groups;applyDynamicLabels();}
+function normalizeDuplicateValue(field,value){
+ let v=String(value??'').trim().toLowerCase();
+ if(field==='mac')v=v.replace(/[-.\s]/g,':').replace(/:{2,}/g,':');
+ if(field==='ipv4')v=v.replace(/\s+/g,'');
+ if(field==='ipv6')v=v.replace(/\s+/g,'');
+ return v;
+}
 function findDuplicateEntries(candidate=null,skipIndex=-1){
  const fields=[['mac','MAC'],['ipv4','IPv4'],['ipv6','IPv6']];
- const all=items.map((it,index)=>({it,index})).filter(x=>x.it.kind==='entry');
+ const all=items.map((it,index)=>({it,index})).filter(x=>x.it&&x.it.kind==='entry');
  const found=[];
- for(const field of fields){
-  const norm=v=>String(v||'').trim().toLowerCase();
-  const value=candidate?norm(candidate[field]):'';
-  if(candidate&&value){const matches=all.filter(x=>x.index!==skipIndex&&norm(x.it[field])===value);if(matches.length)found.push({field:field[0],label:field[1],value:candidate[field],matches:matches.map(x=>x.it)});}
-  else if(!candidate){const seen=new Map();for(const x of all){const v=norm(x.it[field]);if(!v)continue;if(seen.has(v)){let d=found.find(y=>y.field===field[0]&&norm(y.value)===v);if(!d){d={field:field[0],label:field[1],value:x.it[field],matches:[seen.get(v),x.it]};found.push(d);}else if(!d.matches.includes(x.it))d.matches.push(x.it);}else seen.set(v,x.it);}}
+ for(const [field,label] of fields){
+  if(candidate){
+   const value=normalizeDuplicateValue(field,candidate[field]);
+   if(!value)continue;
+   const matches=all.filter(x=>x.index!==skipIndex&&normalizeDuplicateValue(field,x.it[field])===value);
+   if(matches.length)found.push({field,label,value:String(candidate[field]??'').trim(),matches:matches.map(x=>x.it)});
+  }else{
+   const seen=new Map();
+   for(const x of all){
+    const value=normalizeDuplicateValue(field,x.it[field]);if(!value)continue;
+    if(seen.has(value)){
+     let duplicate=found.find(d=>d.field===field&&normalizeDuplicateValue(field,d.value)===value);
+     if(!duplicate){duplicate={field,label,value:String(x.it[field]??'').trim(),matches:[seen.get(value),x.it]};found.push(duplicate);}
+     else if(!duplicate.matches.includes(x.it))duplicate.matches.push(x.it);
+    }else seen.set(value,x.it);
+   }
+  }
  }
  return found;
 }
+function duplicateRowTitle(index){
+ const entry=items[index];if(!entry)return '';
+ const fields=[['mac','MAC'],['ipv4','IPv4'],['ipv6','IPv6']];
+ const dup=fields.filter(([field])=>{const v=normalizeDuplicateValue(field,entry[field]);return v&&items.some((it,i)=>i!==index&&it.kind==='entry'&&normalizeDuplicateValue(field,it[field])===v);}).map(([field,label])=>label+': '+entry[field]);
+ const lang=langSelect?.value||'de';
+ const prefix=lang==='en'?'Duplicate value: ':lang==='es'?'Valor duplicado: ':'Doppelter Wert: ';
+ return dup.length?prefix+dup.join(', '):'';
+}
+
 function duplicateMessage(duplicates){const lang=langSelect?.value||'de';const lines=duplicates.map(d=>`${d.label}: ${d.value}`);const intro=lang==='en'?'Duplicate entry detected. The following value is already assigned:':lang==='es'?'Se ha detectado una entrada duplicada. El siguiente valor ya está asignado:':'Doppelter Eintrag gefunden. Folgender Wert ist bereits vergeben:';return intro+'\n'+lines.join('\n');}
-async function load(){if(dirty&&!await askConfirm(dt('discard')))return;try{const r=await fetch('/api/reservations');if(!r.ok)throw new Error(await r.text());const d=await r.json();items=d.items||[];groups=[...new Set(['Nicht zugeordnet',...items.filter(x=>x.kind==='entry').map(x=>x.group||'Nicht zugeordnet')])];dirty=false;$('save').textContent=(uiText[langSelect?.value||'de']||uiText.de).save;render();status((uiText[langSelect.value]||uiText.de).loaded,'ok');const duplicates=findDuplicateEntries();if(duplicates.length)await inform(duplicateMessage(duplicates));}catch(e){status((uiText[langSelect.value]||uiText.de).loadFailed+e.message,'err');}}
+async function load(){if(dirty&&!await askConfirm(dt('discard')))return;try{const r=await fetch('/api/reservations');if(!r.ok)throw new Error(await r.text());const d=await r.json();items=d.items||[];groups=[...new Set(['Nicht zugeordnet',...items.filter(x=>x.kind==='entry').map(x=>x.group||'Nicht zugeordnet')])];dirty=false;$('save').textContent=(uiText[langSelect?.value||'de']||uiText.de).save;render();const duplicates=findDuplicateEntries();if(duplicates.length){status((langSelect.value==='en'?'Duplicate entries found: ':langSelect.value==='es'?'Se encontraron entradas duplicadas: ':'Doppelte Einträge gefunden: ')+duplicates.map(d=>d.label+' '+d.value).join(' · '),'err');await inform(duplicateMessage(duplicates));}else{status((uiText[langSelect.value]||uiText.de).loaded,'ok');}}catch(e){status((uiText[langSelect.value]||uiText.de).loadFailed+e.message,'err');}}
 let draggedGroupName=null,groupDropTarget=null;
 function reorderGroup(name,delta){const from=groups.indexOf(name),to=from+delta;if(from<0||to<0||to>=groups.length)return;const [g]=groups.splice(from,1);groups.splice(to,0,g);markDirty();render();}
 $('rows').addEventListener('dragstart',e=>{
