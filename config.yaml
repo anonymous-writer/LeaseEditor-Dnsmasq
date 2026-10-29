@@ -2,3 +2,9 @@
 hosts_file: "/var/lib/dnsmasq/dnsmasq.dhcphosts"
 host: "127.0.0.1"
 port: "3009"
+
+# Nur HTTPS-Anfragen über den vertrauenswürdigen NGINX-Proxy zulassen.
+https-secure: false
+# Bei https-secure: true hier ein langes zufälliges Geheimnis setzen und
+# denselben Wert in NGINX als X-LeaseEditor-Proxy-Token senden.
+# https-secure-proxy-token: "BITTE-DURCH-LANGES-ZUFAELLIGES-GEHEIMNIS-ERSETZEN"

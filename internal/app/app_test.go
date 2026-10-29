@@ -1,6 +1,8 @@
 package app
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,5 +38,32 @@ func TestSerializeRejectsDuplicateIPv4(t *testing.T) {
 	}
 	if _, err := serialize(items); err == nil {
 		t.Fatal("expected duplicate IPv4 validation error")
+	}
+}
+
+func TestRequireTrustedHTTPSProxy(t *testing.T) {
+	token := "test-secret-token"
+	h := requireTrustedHTTPSProxy(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }), token)
+	tests := []struct {
+		name, remote, proto, supplied string
+		want                          int
+	}{
+		{"direct local request", "127.0.0.1:5555", "", "", 403},
+		{"spoofed proto without token", "127.0.0.1:5555", "https", "", 403},
+		{"non-local proxy", "10.0.0.2:5555", "https", token, 403},
+		{"trusted proxy", "127.0.0.1:5555", "https", token, 204},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.RemoteAddr = tt.remote
+			r.Header.Set("X-Forwarded-Proto", tt.proto)
+			r.Header.Set("X-LeaseEditor-Proxy-Token", tt.supplied)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != tt.want {
+				t.Fatalf("got %d want %d", w.Code, tt.want)
+			}
+		})
 	}
 }

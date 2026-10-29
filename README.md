@@ -104,8 +104,22 @@ The native binary and Docker image use the same flat YAML-style configuration fi
 | `host` | `127.0.0.1` | Address the web server listens on |
 | `port` | `3009` | TCP port for the web interface |
 | `log_level` | `INFO` | Minimum log level: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
+| `https-secure` | `false` | When `true`, accept requests only from loopback NGINX with `X-Forwarded-Proto: https` and a shared proxy token |
+| `https-secure-proxy-token` | — | Required secret when `https-secure: true`; must match the NGINX `X-LeaseEditor-Proxy-Token` header |
 
 The `LOG_LEVEL` environment variable can be used to set the minimum log level. When both a config value and environment variable are supplied, the environment variable takes precedence.
+
+### HTTPS-secure mode behind NGINX
+
+Set `https-secure: true` and configure a long random `https-secure-proxy-token` secret in `config.yaml`. Configure NGINX to overwrite (not forward from the client) the matching header inside the protected `location /` block:
+
+```nginx
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-LeaseEditor-Proxy-Token "REPLACE_WITH_THE_SAME_LONG_RANDOM_SECRET";
+```
+
+Use the exact same secret in both places and protect `config.yaml` and NGINX configuration from other users. With this mode enabled, requests are accepted only if their TCP peer is loopback, `X-Forwarded-Proto` is `https`, and the secret header matches. Direct local HTTP requests without the secret are rejected. Keep the app bound to `127.0.0.1` when NGINX runs on the same host. This is an application-level proxy check, not a substitute for firewall/network isolation; if using Docker, account for the fact that the proxy's peer address may not be loopback inside the container.
+
 
 ## Logging and troubleshooting
 

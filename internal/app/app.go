@@ -41,10 +41,12 @@ var BuildChannel = "GoDev"
 var BuildUpdatedAt = ""
 
 type AppConfig struct {
-	HostsFile string
-	Host      string
-	Port      string
-	LogLevel  string
+	HostsFile            string
+	Host                 string
+	Port                 string
+	LogLevel             string
+	HTTPSecure           bool
+	HTTPSecureProxyToken string
 }
 
 func Run(assets fs.FS) {
@@ -76,7 +78,11 @@ func Run(assets fs.FS) {
 		}
 	})
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
-	server := &http.Server{Addr: addr, Handler: securityHeaders(mux), ReadHeaderTimeout: 5 * time.Second}
+	handler := securityHeaders(mux)
+	if cfg.HTTPSecure {
+		handler = requireTrustedHTTPSProxy(handler, cfg.HTTPSecureProxyToken)
+	}
+	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
 	LogInfof("LeaseEditor listening on %s; hosts_file=%s", addr, hosts)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		LogFatalf("HTTP server failed: %v", err)
@@ -138,6 +144,13 @@ func loadConfig(path string) (AppConfig, error) {
 			cfg.Host = value
 		case "port":
 			cfg.Port = value
+		case "https-secure":
+			if value != "true" && value != "false" {
+				return cfg, fmt.Errorf("%s:%d: https-secure muss true oder false sein", path, lineNo+1)
+			}
+			cfg.HTTPSecure = value == "true"
+		case "https-secure-proxy-token":
+			cfg.HTTPSecureProxyToken = value
 		case "log_level":
 			if !validLogLevel(value) {
 				return cfg, fmt.Errorf("%s:%d: ungültiger log_level %q (erlaubt: DEBUG, INFO, WARN, ERROR)", path, lineNo+1, value)
@@ -147,12 +160,33 @@ func loadConfig(path string) (AppConfig, error) {
 			return cfg, fmt.Errorf("%s:%d: unbekannter Parameter %q", path, lineNo+1, key)
 		}
 	}
+	if cfg.HTTPSecure && cfg.HTTPSecureProxyToken == "" {
+		return cfg, fmt.Errorf("https-secure: true benötigt https-secure-proxy-token; setze denselben geheimen Wert als X-LeaseEditor-Proxy-Token in NGINX")
+	}
 	port, err := net.LookupPort("tcp", cfg.Port)
 	if err != nil || port < 1 || port > 65535 {
 		return cfg, fmt.Errorf("%s: ungültiger TCP-Port %q", path, cfg.Port)
 	}
 	return cfg, nil
 }
+
+// requireTrustedHTTPSProxy rejects direct requests when HTTPS secure mode is enabled.
+// A request must originate from loopback, carry the HTTPS marker set by NGINX,
+// and include the shared secret injected by the trusted NGINX proxy.
+func requireTrustedHTTPSProxy(next http.Handler, token string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		ip := net.ParseIP(host)
+		if err != nil || ip == nil || !ip.IsLoopback() || r.Header.Get("X-Forwarded-Proto") != "https" || r.Header.Get("X-LeaseEditor-Proxy-Token") != token {
+			http.Error(w, "HTTPS-Zugriff nur über den vertrauenswürdigen Reverse-Proxy erlaubt", http.StatusForbidden)
+			return
+		}
+		// Do not pass the proxy credential further into application handlers.
+		r.Header.Del("X-LeaseEditor-Proxy-Token")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
