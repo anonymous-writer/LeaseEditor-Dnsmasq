@@ -29,7 +29,9 @@ function normalizeDuplicateValue(field,value){
  return v;
 }
 function findDuplicateEntries(candidate=null,skipIndex=-1){
- const fields=[['mac','MAC'],['ipv4','IPv4'],['ipv6','IPv6']];
+ const lang=langSelect?.value||'de';
+ const hostnameLabel=lang==='en'?'Hostname':lang==='es'?'Nombre de host':'Hostname';
+ const fields=[['mac','MAC'],['ipv4','IPv4'],['ipv6','IPv6'],['hostname',hostnameLabel]];
  const all=items.map((it,index)=>({it,index})).filter(x=>x.it&&x.it.kind==='entry');
  const found=[];
  for(const [field,label] of fields){
@@ -54,9 +56,10 @@ function findDuplicateEntries(candidate=null,skipIndex=-1){
 }
 function duplicateRowTitle(index){
  const entry=items[index];if(!entry)return '';
- const fields=[['mac','MAC'],['ipv4','IPv4'],['ipv6','IPv6']];
- const dup=fields.filter(([field])=>{const v=normalizeDuplicateValue(field,entry[field]);return v&&items.some((it,i)=>i!==index&&it.kind==='entry'&&normalizeDuplicateValue(field,it[field])===v);}).map(([field,label])=>label+': '+entry[field]);
  const lang=langSelect?.value||'de';
+ const hostnameLabel=lang==='en'?'Hostname':lang==='es'?'Nombre de host':'Hostname';
+ const fields=[['mac','MAC'],['ipv4','IPv4'],['ipv6','IPv6'],['hostname',hostnameLabel]];
+ const dup=fields.filter(([field])=>{const v=normalizeDuplicateValue(field,entry[field]);return v&&items.some((it,i)=>i!==index&&it.kind==='entry'&&normalizeDuplicateValue(field,it[field])===v);}).map(([field,label])=>label+': '+entry[field]);
  const prefix=lang==='en'?'Duplicate value: ':lang==='es'?'Valor duplicado: ':'Doppelter Wert: ';
  return dup.length?prefix+dup.join(', '):'';
 }
