@@ -38,3 +38,73 @@ input,select{background:#0a192d;border-color:#2d486a;border-radius:9px;min-heigh
 body.light-theme{--bg:#edf4fc;--panel:#fff;--panel2:#e7f0fa;--line:#cfdeee;--text:#172b43;--muted:#607993;--blue:#147be8;--cyan:#087ebc;--red:#d73d55;background:linear-gradient(180deg,#e3effc 0%,#f5f8fc 240px);background-attachment:fixed}
 body.light-theme header{background:linear-gradient(110deg,#e4effb,#d9eaff 55%,#eaf3fc);border-bottom-color:#bfd8ef;box-shadow:0 8px 24px #1b4c7810}body.light-theme header p{color:#365574}body.light-theme .toolbar{background:#ffffffc9;border-color:#cbdced;box-shadow:0 8px 24px #2550800d}body.light-theme .btn{background:linear-gradient(180deg,#fff,#eaf2fb);border-color:#b8cde2;color:#1a3655}body.light-theme .btn.primary{background:linear-gradient(135deg,#168cff,#155ce7);border-color:#258cff;color:white}body.light-theme .btn.danger,body.light-theme .restart-dnsmasq{background:#fff0f3;border-color:#e8b7c2;color:#9e3048}body.light-theme input,body.light-theme select{background:#fff;border-color:#c1d3e6}body.light-theme th{background:#e4effb;color:#345371}body.light-theme td{border-bottom-color:#e0e9f3}body.light-theme tbody tr:not(.section):not(.group-heading):hover td{background:#eaf5ff}body.light-theme .group-heading td{background:linear-gradient(90deg,#d9ecff,#e8f4ff);color:#153e67;border-color:#a5d4fb}body.light-theme .group-heading .group-pill{background:#d0eaff;border-color:#8dc8f5;color:#174d7d}body.light-theme .group-row td{background:#f4f8fd}body.light-theme .comment-row td{background:#edf4fb}body.light-theme .modal{border-color:#c4d8ec;box-shadow:0 24px 80px #163c621f}body.light-theme .restart-dnsmasq:hover:not(:disabled){background:#ffe2e8}
 @media(max-width:700px){header{min-height:auto;padding:14px 16px}header img{width:46px;height:54px}header .repo-status{margin-left:0}main{margin:16px auto}.toolbar{padding:9px}.toolbar input{flex-basis:100%;min-width:0}.toolbar .btn{flex:1}.groupbar select{flex:1;min-width:130px}}
+
+/* Kommentare lassen sich per Maus per Drag-and-drop verschieben. */
+.comment-row[draggable="true"]{cursor:grab}.comment-row[draggable="true"]:active{cursor:grabbing}.comment-row.dragging-comment{opacity:.45}.comment-row[draggable="true"] td:first-child{user-select:none}
+
+/* Kommentar-Drag-and-drop und Sichtbarkeitsschalter */
+.comment-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);white-space:nowrap;cursor:pointer}.comment-toggle input{width:17px;height:17px;margin:0;accent-color:var(--blue)}.comment-row.dragging-comment{opacity:.35}.comment-drop-placeholder td{height:52px;padding:0!important;background:#153d61!important;border:2px dashed #59b8f5!important;position:relative}.comment-drop-placeholder td:after{content:"";display:block;height:4px;margin:0 12px;background:#59b8f5;border-radius:4px;box-shadow:0 0 12px #59b8f588}.comment-row.drop-before td{border-top:3px solid #59b8f5!important}.comment-row.drop-after td{border-bottom:3px solid #59b8f5!important}body.light-theme .comment-drop-placeholder td{background:#d9ecff!important}
+
+/* Kompakter, konsistenter Kommentare-Schalter */
+.comment-toggle{
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:8px 12px;
+  min-height:40px;
+  width:auto;
+  flex:0 0 auto;
+  border:1px solid #354b67;
+  border-radius:8px;
+  background:var(--panel);
+  color:var(--text);
+  white-space:nowrap;
+  cursor:pointer;
+}
+.comment-toggle input{
+  appearance:auto;
+  -webkit-appearance:checkbox;
+  flex:0 0 16px;
+  width:16px;
+  height:16px;
+  min-width:16px;
+  margin:0;
+  padding:0;
+  accent-color:var(--blue);
+}
+.comment-toggle span{line-height:1.2}
+.comment-toggle:hover{border-color:var(--cyan)}
+.comment-drop-placeholder td{
+  height:30px!important;
+  min-height:30px;
+  padding:0!important;
+  background:#153d61!important;
+  border-top:2px solid #59b8f5!important;
+  border-bottom:2px solid #59b8f5!important;
+  transition:height .12s ease,background-color .12s ease;
+}
+.comment-drop-placeholder td:after{height:3px!important}
+.comment-row.drop-before td{border-top:3px solid #59b8f5!important}
+.comment-row.drop-after td{border-bottom:3px solid #59b8f5!important}
+
+/* Gruppen per Pfeil oder Drag-and-drop sortieren */
+.group-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.group-order-actions{display:flex;align-items:center;gap:5px}.group-move{padding:3px 9px!important;min-width:32px;line-height:1.3}.group-heading[draggable="true"]{cursor:grab}.group-heading.dragging-group{opacity:.4}.group-heading.group-drop-before td{border-top:3px solid #59b8f5!important}.group-heading.group-drop-after td{border-bottom:3px solid #59b8f5!important}.group-drag-hint{font-size:18px;letter-spacing:-4px;color:#9fc9ed;padding:0 5px;cursor:grab;user-select:none}body.light-theme .group-drag-hint{color:#50769b}
+
+/* Doppelte DHCP-Werte beim Laden dauerhaft sichtbar hervorheben */
+.group-row.duplicate-entry td{background:#4a202b!important;border-top:1px solid #a9475a;border-bottom:1px solid #a9475a}
+.group-row.duplicate-entry td:first-child{border-left:4px solid #ff647c!important}
+.group-row.duplicate-entry:hover td{background:#5a2633!important}
+body.light-theme .group-row.duplicate-entry td{background:#fff0f1!important;border-color:#e7a6af}
+body.light-theme .group-row.duplicate-entry td:first-child{border-left-color:#d73d55!important}
+/* Geräte innerhalb derselben Gruppe per Pfeil oder Drag-and-drop sortieren */
+.group-row[draggable="true"]{cursor:grab}
+.group-row[draggable="true"]:active{cursor:grabbing}
+.group-row.dragging-entry{opacity:.4}
+.group-row.entry-drop-before td{border-top:3px solid #59b8f5!important}
+.group-row.entry-drop-after td{border-bottom:3px solid #59b8f5!important}
+.entry-actions{display:flex;align-items:center;gap:4px}
+.entry-actions .entry-move{padding:4px 7px;min-width:28px;line-height:1.2}
+.entry-drag-hint{font-size:17px;letter-spacing:-4px;color:#9fc9ed;padding:0 4px;cursor:grab;user-select:none}
+body.light-theme .entry-drag-hint{color:#50769b}
