@@ -3,6 +3,17 @@ name: Build and publish Docker image
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Docker-Architektur für den manuellen Testlauf"
+        required: true
+        type: choice
+        default: both
+        options:
+          - linux/amd64
+          - linux/arm64
+          - both
 
 permissions:
   contents: read
@@ -20,7 +31,7 @@ jobs:
       - name: Checkout release tag
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -31,13 +42,23 @@ jobs:
       - name: Prepare build metadata
         id: vars
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
-          RELEASE_PUBLISHED_AT: ${{ github.event.release.published_at }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease || false }}
+          RELEASE_PUBLISHED_AT: ${{ github.event.release.published_at || '' }}
         run: |
-          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
-          echo "release_date=${RELEASE_PUBLISHED_AT%%T*}" >> "$GITHUB_OUTPUT"
-          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then echo "channel=Beta" >> "$GITHUB_OUTPUT"; else echo "channel=Release" >> "$GITHUB_OUTPUT"; fi
+          if [[ -n "$RELEASE_TAG" ]]; then
+            echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "release_date=${RELEASE_PUBLISHED_AT%%T*}" >> "$GITHUB_OUTPUT"
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              echo "channel=Beta" >> "$GITHUB_OUTPUT"
+            else
+              echo "channel=Release" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "version=dev" >> "$GITHUB_OUTPUT"
+            echo "release_date=" >> "$GITHUB_OUTPUT"
+            echo "channel=GoDev" >> "$GITHUB_OUTPUT"
+          fi
           echo "updated_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
@@ -54,13 +75,16 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=tag
-            type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+            type=raw,value=test-amd64,enable=${{ github.event_name == 'workflow_dispatch' && inputs.platform == 'linux/amd64' }}
+            type=raw,value=test-arm64,enable=${{ github.event_name == 'workflow_dispatch' && inputs.platform == 'linux/arm64' }}
+            type=raw,value=test-multiarch,enable=${{ github.event_name == 'workflow_dispatch' && inputs.platform == 'both' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ github.event_name == 'workflow_dispatch' && inputs.platform != 'both' && inputs.platform || 'linux/amd64,linux/arm64' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
