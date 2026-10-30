@@ -105,7 +105,7 @@ The native binary and Docker image use the same flat YAML-style configuration fi
 | `port` | `3009` | TCP port for the web interface |
 | `log_level` | `INFO` | Minimum log level: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
 | `https-secure` | `false` | Require trusted local HTTPS reverse proxy |
-| `https-secure-token-file` | `/run/secrets/leaseeditor-proxy-token.json` | Rotating token state file (app writes; NGINX reads) |
+| `https-secure-token-file` | `/etc/nginx/secrets/leaseeditor-proxy-token.json` | Rotating token state file (app writes; NGINX reads) |
 | `https-secure-token-validity` | `720h` | Token lifetime / rotation interval |
 | `https-secure-token-grace` | `5m` | Previous-token acceptance window |
 

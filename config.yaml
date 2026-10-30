@@ -5,11 +5,8 @@ port: "3009"
 
 # Nur HTTPS-Anfragen über den vertrauenswürdigen NGINX-Proxy zulassen.
 https-secure: false
-# Bei https-secure: true hier ein langes zufälliges Geheimnis setzen und
-# denselben Wert in NGINX als X-LeaseEditor-Proxy-Token senden.
-# https-secure-proxy-token: "BITTE-DURCH-LANGES-ZUFAELLIGES-GEHEIMNIS-ERSETZEN"
 
 # Rotating reverse-proxy token (generated automatically when HTTPS secure mode is enabled)
-https-secure-token-file: "/run/secrets/leaseeditor-proxy-token.json"
+https-secure-token-file: "/etc/nginx/secrets/leaseeditor-proxy-token.json"
 https-secure-token-validity: "720h"
 https-secure-token-grace: "5m"

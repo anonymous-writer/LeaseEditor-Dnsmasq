@@ -131,7 +131,7 @@ func handleRestartDnsmasq(w http.ResponseWriter, r *http.Request) {
 }
 
 func loadConfig(path string) (AppConfig, error) {
-	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO", HTTPSecureTokenFile: "/run/secrets/leaseeditor-proxy-token.json", HTTPSecureTokenValidity: 30 * 24 * time.Hour, HTTPSecureTokenGrace: 5 * time.Minute}
+	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO", HTTPSecureTokenFile: "/etc/nginx/secrets/leaseeditor-proxy-token.json", HTTPSecureTokenValidity: 30 * 24 * time.Hour, HTTPSecureTokenGrace: 5 * time.Minute}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return cfg, fmt.Errorf("Datei %q nicht lesbar: %w", path, err)
