@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/anonymous-writer/wlm-leaseeditor/internal/proxytoken"
 )
 
 type Item struct {
@@ -41,12 +43,15 @@ var BuildChannel = "GoDev"
 var BuildUpdatedAt = ""
 
 type AppConfig struct {
-	HostsFile            string
-	Host                 string
-	Port                 string
-	LogLevel             string
-	HTTPSecure           bool
-	HTTPSecureProxyToken string
+	HostsFile               string
+	Host                    string
+	Port                    string
+	LogLevel                string
+	HTTPSecure              bool
+	HTTPSecureProxyToken    string
+	HTTPSecureTokenFile     string
+	HTTPSecureTokenValidity time.Duration
+	HTTPSecureTokenGrace    time.Duration
 }
 
 func Run(assets fs.FS) {
@@ -79,8 +84,16 @@ func Run(assets fs.FS) {
 	})
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 	handler := securityHeaders(mux)
+	var tokenManager *proxytoken.Manager
 	if cfg.HTTPSecure {
-		handler = requireTrustedHTTPSProxy(handler, cfg.HTTPSecureProxyToken)
+		tokenManager, err = proxytoken.New(cfg.HTTPSecureTokenFile, cfg.HTTPSecureTokenValidity, cfg.HTTPSecureTokenGrace)
+		if err != nil {
+			LogFatalf("proxy token manager: %v", err)
+		}
+		stopRotation := make(chan struct{})
+		defer close(stopRotation)
+		go tokenManager.Run(stopRotation)
+		handler = requireTrustedHTTPSProxy(handler, tokenManager)
 	}
 	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
 	LogInfof("LeaseEditor listening on %s; hosts_file=%s", addr, hosts)
@@ -118,7 +131,7 @@ func handleRestartDnsmasq(w http.ResponseWriter, r *http.Request) {
 }
 
 func loadConfig(path string) (AppConfig, error) {
-	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO"}
+	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO", HTTPSecureTokenFile: "/run/secrets/leaseeditor-proxy-token.json", HTTPSecureTokenValidity: 30 * 24 * time.Hour, HTTPSecureTokenGrace: 5 * time.Minute}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return cfg, fmt.Errorf("Datei %q nicht lesbar: %w", path, err)
@@ -151,6 +164,20 @@ func loadConfig(path string) (AppConfig, error) {
 			cfg.HTTPSecure = value == "true"
 		case "https-secure-proxy-token":
 			cfg.HTTPSecureProxyToken = value
+		case "https-secure-token-file":
+			cfg.HTTPSecureTokenFile = value
+		case "https-secure-token-validity":
+			d, e := time.ParseDuration(value)
+			if e != nil || d <= 0 {
+				return cfg, fmt.Errorf("%s:%d: invalid token validity", path, lineNo+1)
+			}
+			cfg.HTTPSecureTokenValidity = d
+		case "https-secure-token-grace":
+			d, e := time.ParseDuration(value)
+			if e != nil || d < 0 {
+				return cfg, fmt.Errorf("%s:%d: invalid token grace", path, lineNo+1)
+			}
+			cfg.HTTPSecureTokenGrace = d
 		case "log_level":
 			if !validLogLevel(value) {
 				return cfg, fmt.Errorf("%s:%d: ungültiger log_level %q (erlaubt: DEBUG, INFO, WARN, ERROR)", path, lineNo+1, value)
@@ -160,8 +187,8 @@ func loadConfig(path string) (AppConfig, error) {
 			return cfg, fmt.Errorf("%s:%d: unbekannter Parameter %q", path, lineNo+1, key)
 		}
 	}
-	if cfg.HTTPSecure && cfg.HTTPSecureProxyToken == "" {
-		return cfg, fmt.Errorf("https-secure: true benötigt https-secure-proxy-token; setze denselben geheimen Wert als X-LeaseEditor-Proxy-Token in NGINX")
+	if cfg.HTTPSecure && (cfg.HTTPSecureTokenFile == "" || cfg.HTTPSecureTokenGrace >= cfg.HTTPSecureTokenValidity) {
+		return cfg, fmt.Errorf("https-secure: true benötigt gültige Token-Datei, Laufzeit und Grace-Period")
 	}
 	port, err := net.LookupPort("tcp", cfg.Port)
 	if err != nil || port < 1 || port > 65535 {
@@ -173,11 +200,11 @@ func loadConfig(path string) (AppConfig, error) {
 // requireTrustedHTTPSProxy rejects direct requests when HTTPS secure mode is enabled.
 // A request must originate from loopback, carry the HTTPS marker set by NGINX,
 // and include the shared secret injected by the trusted NGINX proxy.
-func requireTrustedHTTPSProxy(next http.Handler, token string) http.Handler {
+func requireTrustedHTTPSProxy(next http.Handler, token *proxytoken.Manager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.RemoteAddr)
 		ip := net.ParseIP(host)
-		if err != nil || ip == nil || !ip.IsLoopback() || r.Header.Get("X-Forwarded-Proto") != "https" || r.Header.Get("X-LeaseEditor-Proxy-Token") != token {
+		if err != nil || ip == nil || !ip.IsLoopback() || r.Header.Get("X-Forwarded-Proto") != "https" || !token.Valid(r.Header.Get("X-LeaseEditor-Proxy-Token"), time.Now()) {
 			http.Error(w, "HTTPS-Zugriff nur über den vertrauenswürdigen Reverse-Proxy erlaubt", http.StatusForbidden)
 			return
 		}

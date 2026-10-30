@@ -104,22 +104,16 @@ The native binary and Docker image use the same flat YAML-style configuration fi
 | `host` | `127.0.0.1` | Address the web server listens on |
 | `port` | `3009` | TCP port for the web interface |
 | `log_level` | `INFO` | Minimum log level: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
-| `https-secure` | `false` | When `true`, accept requests only from loopback NGINX with `X-Forwarded-Proto: https` and a shared proxy token |
-| `https-secure-proxy-token` | — | Required secret when `https-secure: true`; must match the NGINX `X-LeaseEditor-Proxy-Token` header |
+| `https-secure` | `false` | Require trusted local HTTPS reverse proxy |
+| `https-secure-token-file` | `/run/secrets/leaseeditor-proxy-token.json` | Rotating token state file (app writes; NGINX reads) |
+| `https-secure-token-validity` | `720h` | Token lifetime / rotation interval |
+| `https-secure-token-grace` | `5m` | Previous-token acceptance window |
 
 The `LOG_LEVEL` environment variable can be used to set the minimum log level. When both a config value and environment variable are supplied, the environment variable takes precedence.
 
 ### HTTPS-secure mode behind NGINX
 
-Set `https-secure: true` and configure a long random `https-secure-proxy-token` secret in `config.yaml`. Configure NGINX to overwrite (not forward from the client) the matching header inside the protected `location /` block:
-
-```nginx
-proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-LeaseEditor-Proxy-Token "REPLACE_WITH_THE_SAME_LONG_RANDOM_SECRET";
-```
-
-Use the exact same secret in both places and protect `config.yaml` and NGINX configuration from other users. With this mode enabled, requests are accepted only if their TCP peer is loopback, `X-Forwarded-Proto` is `https`, and the secret header matches. Direct local HTTP requests without the secret are rejected. Keep the app bound to `127.0.0.1` when NGINX runs on the same host. This is an application-level proxy check, not a substitute for firewall/network isolation; if using Docker, account for the fact that the proxy's peer address may not be loopback inside the container.
-
+Set `https-secure: true`. LeaseEditor creates a separate random 100-character token in the configured JSON file and rotates it every 30 days. Include `nginx/proxy-token.lua.conf` in the OpenResty proxied location; it reads the current token on every request, so token rotation does not require an NGINX reload. The backend accepts the previous token for the configured five-minute grace period. Ensure the app can write the file and NGINX can read it (file mode `0640`, shared group; use a setgid directory or equivalent group ownership). Keep the app bound to `127.0.0.1` when the proxy is on the same host. Authelia remains the authentication layer; this token only authenticates the local proxy hop.
 
 ## Logging and troubleshooting
 

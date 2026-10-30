@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/anonymous-writer/wlm-leaseeditor/internal/proxytoken"
 )
 
 func TestReadAndSerializeKeepsCommentsAndUnknownLines(t *testing.T) {
@@ -42,8 +45,12 @@ func TestSerializeRejectsDuplicateIPv4(t *testing.T) {
 }
 
 func TestRequireTrustedHTTPSProxy(t *testing.T) {
-	token := "test-secret-token"
-	h := requireTrustedHTTPSProxy(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }), token)
+	manager, err := proxytoken.New(filepath.Join(t.TempDir(), "proxy-token.json"), 30*24*time.Hour, 5*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := manager.Current()
+	h := requireTrustedHTTPSProxy(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }), manager)
 	tests := []struct {
 		name, remote, proto, supplied string
 		want                          int
