@@ -166,3 +166,10 @@ func (m *Manager) Valid(token string, now time.Time) bool {
 	return s.Previous != "" && now.Before(s.PreviousUntil) && subtle.ConstantTimeCompare([]byte(token), []byte(s.Previous)) == 1
 }
 func (m *Manager) Path() string { return m.path }
+
+// Current returns the active token. The token is read under the manager lock.
+func (m *Manager) Current() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.state.Current
+}
