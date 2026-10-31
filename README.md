@@ -35,7 +35,7 @@ The release workflow publishes multi-architecture images to GitHub Container Reg
 docker pull ghcr.io/anonymous-writer/leaseeditor-dnsmasq:latest
 ```
 
-Create a working directory containing `config.yaml` and `compose.yaml`, and create sure the configured hosts file exists and is writable by the container. Example configuration:
+Create a working directory containing `config.yaml` and `compose.yaml`, and make sure the configured hosts file exists and is writable by the container. Example configuration:
 
 ```yaml
 # config.yaml

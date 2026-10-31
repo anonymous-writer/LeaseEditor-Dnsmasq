@@ -74,3 +74,15 @@ func TestRequireTrustedHTTPSProxy(t *testing.T) {
 		})
 	}
 }
+
+
+func TestSerializeRejectsControlCharactersInGroup(t *testing.T) {
+	for _, group := range []string{"office\r#malicious", "office\n#malicious", "office\x00malicious"} {
+		t.Run(group, func(t *testing.T) {
+			items := []Item{{Kind: "entry", Group: group, MAC: "aa:bb:cc:dd:ee:01", IPv4: "192.168.1.10"}}
+			if _, err := serialize(items); err == nil {
+				t.Fatal("expected invalid group control character error")
+			}
+		})
+	}
+}

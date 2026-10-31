@@ -37,7 +37,7 @@ type Document struct {
 }
 
 var macPattern = regexp.MustCompile(`(?i)^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
-var BuildVersion = "1.0.0-Beta"
+var BuildVersion = "1.0.4-Beta"
 var BuildReleaseDate = ""
 var BuildChannel = "GoDev"
 var BuildUpdatedAt = ""
@@ -372,6 +372,11 @@ func serialize(items []Item) ([]byte, error) {
 			group := strings.TrimSpace(it.Group)
 			if group == "" {
 				group = "Nicht zugeordnet"
+			}
+			// Group names become dnsmasq comment lines. Reject control characters
+			// instead of allowing carriage returns/NUL bytes into the config file.
+			if strings.ContainsAny(group, "\r\n\x00") {
+				return nil, fmt.Errorf("Zeile %d: Gruppenname enthält ungültige Steuerzeichen", i+1)
 			}
 			if group != lastGroup {
 				if out.Len() > 0 && !bytes.HasSuffix(out.Bytes(), []byte("\n\n")) {
