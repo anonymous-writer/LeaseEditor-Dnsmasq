@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anonymous-writer/wlm-leaseeditor/internal/proxytoken"
+	"github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/proxytoken"
 )
 
 type Item struct {

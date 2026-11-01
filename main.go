@@ -2,7 +2,7 @@ package main
 
 import (
 	"embed"
-	"github.com/anonymous-writer/wlm-leaseeditor/internal/app"
+	"github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/app"
 )
 
 //go:embed templates/index.html static/*

@@ -7,7 +7,7 @@ ARG APP_UPDATED_AT=
 COPY go.mod ./
 COPY . ./
 COPY static ./static
-RUN go test ./... && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildVersion=${APP_VERSION} -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildReleaseDate=${APP_RELEASE_DATE} -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildChannel=${APP_CHANNEL} -X github.com/anonymous-writer/wlm-leaseeditor/internal/app.BuildUpdatedAt=${APP_UPDATED_AT}" -o /out/leaseeditor-dnsmasq .
+RUN go test ./... && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/app.BuildVersion=${APP_VERSION} -X github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/app.BuildReleaseDate=${APP_RELEASE_DATE} -X github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/app.BuildChannel=${APP_CHANNEL} -X github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/app.BuildUpdatedAt=${APP_UPDATED_AT}" -o /out/leaseeditor-dnsmasq .
 
 FROM alpine:3.24
 RUN addgroup -S leaseeditor && adduser -S -G leaseeditor leaseeditor
