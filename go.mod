@@ -1,3 +1,3 @@
-module github.com/anonymous-writer/wlm-leaseeditor
+module github.com/anonymous-writer/LeaseEditor-Dnsmasq
 
 go 1.27
