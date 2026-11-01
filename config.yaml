@@ -2,3 +2,11 @@
 hosts_file: "/var/lib/dnsmasq/dnsmasq.dhcphosts"
 host: "127.0.0.1"
 port: "3009"
+
+# Nur HTTPS-Anfragen über den vertrauenswürdigen NGINX-Proxy zulassen.
+https-secure: false
+
+# Rotating reverse-proxy token (generated automatically when HTTPS secure mode is enabled)
+https-secure-token-file: "/etc/nginx/secrets/leaseeditor-proxy-token.json"
+https-secure-token-validity: "720h"
+https-secure-token-grace: "5m"

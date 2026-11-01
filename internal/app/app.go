@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/anonymous-writer/wlm-leaseeditor/internal/proxytoken"
 )
 
 type Item struct {
@@ -35,16 +37,21 @@ type Document struct {
 }
 
 var macPattern = regexp.MustCompile(`(?i)^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
-var BuildVersion = "1.0.0-Beta"
+var BuildVersion = "1.0.4-Beta"
 var BuildReleaseDate = ""
 var BuildChannel = "GoDev"
 var BuildUpdatedAt = ""
 
 type AppConfig struct {
-	HostsFile string
-	Host      string
-	Port      string
-	LogLevel  string
+	HostsFile               string
+	Host                    string
+	Port                    string
+	LogLevel                string
+	HTTPSecure              bool
+	HTTPSecureProxyToken    string
+	HTTPSecureTokenFile     string
+	HTTPSecureTokenValidity time.Duration
+	HTTPSecureTokenGrace    time.Duration
 }
 
 func Run(assets fs.FS) {
@@ -76,7 +83,19 @@ func Run(assets fs.FS) {
 		}
 	})
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
-	server := &http.Server{Addr: addr, Handler: securityHeaders(mux), ReadHeaderTimeout: 5 * time.Second}
+	handler := securityHeaders(mux)
+	var tokenManager *proxytoken.Manager
+	if cfg.HTTPSecure {
+		tokenManager, err = proxytoken.New(cfg.HTTPSecureTokenFile, cfg.HTTPSecureTokenValidity, cfg.HTTPSecureTokenGrace)
+		if err != nil {
+			LogFatalf("proxy token manager: %v", err)
+		}
+		stopRotation := make(chan struct{})
+		defer close(stopRotation)
+		go tokenManager.Run(stopRotation)
+		handler = requireTrustedHTTPSProxy(handler, tokenManager)
+	}
+	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
 	LogInfof("LeaseEditor listening on %s; hosts_file=%s", addr, hosts)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		LogFatalf("HTTP server failed: %v", err)
@@ -112,7 +131,7 @@ func handleRestartDnsmasq(w http.ResponseWriter, r *http.Request) {
 }
 
 func loadConfig(path string) (AppConfig, error) {
-	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO"}
+	cfg := AppConfig{HostsFile: "/var/lib/dnsmasq/dnsmasq.dhcphosts", Host: "127.0.0.1", Port: "3009", LogLevel: "INFO", HTTPSecureTokenFile: "/etc/nginx/secrets/leaseeditor-proxy-token.json", HTTPSecureTokenValidity: 30 * 24 * time.Hour, HTTPSecureTokenGrace: 5 * time.Minute}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return cfg, fmt.Errorf("Datei %q nicht lesbar: %w", path, err)
@@ -138,6 +157,27 @@ func loadConfig(path string) (AppConfig, error) {
 			cfg.Host = value
 		case "port":
 			cfg.Port = value
+		case "https-secure":
+			if value != "true" && value != "false" {
+				return cfg, fmt.Errorf("%s:%d: https-secure muss true oder false sein", path, lineNo+1)
+			}
+			cfg.HTTPSecure = value == "true"
+		case "https-secure-proxy-token":
+			cfg.HTTPSecureProxyToken = value
+		case "https-secure-token-file":
+			cfg.HTTPSecureTokenFile = value
+		case "https-secure-token-validity":
+			d, e := time.ParseDuration(value)
+			if e != nil || d <= 0 {
+				return cfg, fmt.Errorf("%s:%d: invalid token validity", path, lineNo+1)
+			}
+			cfg.HTTPSecureTokenValidity = d
+		case "https-secure-token-grace":
+			d, e := time.ParseDuration(value)
+			if e != nil || d < 0 {
+				return cfg, fmt.Errorf("%s:%d: invalid token grace", path, lineNo+1)
+			}
+			cfg.HTTPSecureTokenGrace = d
 		case "log_level":
 			if !validLogLevel(value) {
 				return cfg, fmt.Errorf("%s:%d: ungültiger log_level %q (erlaubt: DEBUG, INFO, WARN, ERROR)", path, lineNo+1, value)
@@ -147,12 +187,33 @@ func loadConfig(path string) (AppConfig, error) {
 			return cfg, fmt.Errorf("%s:%d: unbekannter Parameter %q", path, lineNo+1, key)
 		}
 	}
+	if cfg.HTTPSecure && (cfg.HTTPSecureTokenFile == "" || cfg.HTTPSecureTokenGrace >= cfg.HTTPSecureTokenValidity) {
+		return cfg, fmt.Errorf("https-secure: true benötigt gültige Token-Datei, Laufzeit und Grace-Period")
+	}
 	port, err := net.LookupPort("tcp", cfg.Port)
 	if err != nil || port < 1 || port > 65535 {
 		return cfg, fmt.Errorf("%s: ungültiger TCP-Port %q", path, cfg.Port)
 	}
 	return cfg, nil
 }
+
+// requireTrustedHTTPSProxy rejects direct requests when HTTPS secure mode is enabled.
+// A request must originate from loopback, carry the HTTPS marker set by NGINX,
+// and include the shared secret injected by the trusted NGINX proxy.
+func requireTrustedHTTPSProxy(next http.Handler, token *proxytoken.Manager) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		ip := net.ParseIP(host)
+		if err != nil || ip == nil || !ip.IsLoopback() || r.Header.Get("X-Forwarded-Proto") != "https" || !token.Valid(r.Header.Get("X-LeaseEditor-Proxy-Token"), time.Now()) {
+			http.Error(w, "HTTPS-Zugriff nur über den vertrauenswürdigen Reverse-Proxy erlaubt", http.StatusForbidden)
+			return
+		}
+		// Do not pass the proxy credential further into application handlers.
+		r.Header.Del("X-LeaseEditor-Proxy-Token")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -311,6 +372,11 @@ func serialize(items []Item) ([]byte, error) {
 			group := strings.TrimSpace(it.Group)
 			if group == "" {
 				group = "Nicht zugeordnet"
+			}
+			// Group names become dnsmasq comment lines. Reject control characters
+			// instead of allowing carriage returns/NUL bytes into the config file.
+			if strings.ContainsAny(group, "\r\n\x00") {
+				return nil, fmt.Errorf("Zeile %d: Gruppenname enthält ungültige Steuerzeichen", i+1)
 			}
 			if group != lastGroup {
 				if out.Len() > 0 && !bytes.HasSuffix(out.Bytes(), []byte("\n\n")) {

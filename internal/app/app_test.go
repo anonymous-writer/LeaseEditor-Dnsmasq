@@ -1,10 +1,15 @@
 package app
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/anonymous-writer/wlm-leaseeditor/internal/proxytoken"
 )
 
 func TestReadAndSerializeKeepsCommentsAndUnknownLines(t *testing.T) {
@@ -36,5 +41,48 @@ func TestSerializeRejectsDuplicateIPv4(t *testing.T) {
 	}
 	if _, err := serialize(items); err == nil {
 		t.Fatal("expected duplicate IPv4 validation error")
+	}
+}
+
+func TestRequireTrustedHTTPSProxy(t *testing.T) {
+	manager, err := proxytoken.New(filepath.Join(t.TempDir(), "proxy-token.json"), 30*24*time.Hour, 5*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := manager.Current()
+	h := requireTrustedHTTPSProxy(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }), manager)
+	tests := []struct {
+		name, remote, proto, supplied string
+		want                          int
+	}{
+		{"direct local request", "127.0.0.1:5555", "", "", 403},
+		{"spoofed proto without token", "127.0.0.1:5555", "https", "", 403},
+		{"non-local proxy", "10.0.0.2:5555", "https", token, 403},
+		{"trusted proxy", "127.0.0.1:5555", "https", token, 204},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.RemoteAddr = tt.remote
+			r.Header.Set("X-Forwarded-Proto", tt.proto)
+			r.Header.Set("X-LeaseEditor-Proxy-Token", tt.supplied)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != tt.want {
+				t.Fatalf("got %d want %d", w.Code, tt.want)
+			}
+		})
+	}
+}
+
+
+func TestSerializeRejectsControlCharactersInGroup(t *testing.T) {
+	for _, group := range []string{"office\r#malicious", "office\n#malicious", "office\x00malicious"} {
+		t.Run(group, func(t *testing.T) {
+			items := []Item{{Kind: "entry", Group: group, MAC: "aa:bb:cc:dd:ee:01", IPv4: "192.168.1.10"}}
+			if _, err := serialize(items); err == nil {
+				t.Fatal("expected invalid group control character error")
+			}
+		})
 	}
 }

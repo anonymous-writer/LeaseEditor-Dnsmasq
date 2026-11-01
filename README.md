@@ -35,7 +35,7 @@ The release workflow publishes multi-architecture images to GitHub Container Reg
 docker pull ghcr.io/anonymous-writer/leaseeditor-dnsmasq:latest
 ```
 
-Create a working directory containing `config.yaml` and `compose.yaml`, and create sure the configured hosts file exists and is writable by the container. Example configuration:
+Create a working directory containing `config.yaml` and `compose.yaml`, and make sure the configured hosts file exists and is writable by the container. Example configuration:
 
 ```yaml
 # config.yaml
@@ -104,8 +104,16 @@ The native binary and Docker image use the same flat YAML-style configuration fi
 | `host` | `127.0.0.1` | Address the web server listens on |
 | `port` | `3009` | TCP port for the web interface |
 | `log_level` | `INFO` | Minimum log level: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
+| `https-secure` | `false` | Require trusted local HTTPS reverse proxy |
+| `https-secure-token-file` | `/etc/nginx/secrets/leaseeditor-proxy-token.json` | Rotating token state file (app writes; NGINX reads) |
+| `https-secure-token-validity` | `720h` | Token lifetime / rotation interval |
+| `https-secure-token-grace` | `5m` | Previous-token acceptance window |
 
 The `LOG_LEVEL` environment variable can be used to set the minimum log level. When both a config value and environment variable are supplied, the environment variable takes precedence.
+
+### HTTPS-secure mode behind NGINX
+
+Set `https-secure: true`. LeaseEditor creates a separate random 100-character token in the configured JSON file and rotates it every 30 days. Include `nginx/proxy-token.lua.conf` in the OpenResty proxied location; it reads the current token on every request, so token rotation does not require an NGINX reload. The backend accepts the previous token for the configured five-minute grace period. Ensure the app can write the file and NGINX can read it (file mode `0640`, shared group; use a setgid directory or equivalent group ownership). Keep the app bound to `127.0.0.1` when the proxy is on the same host. Authelia remains the authentication layer; this token only authenticates the local proxy hop.
 
 ## Logging and troubleshooting
 
