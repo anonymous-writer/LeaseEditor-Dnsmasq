@@ -54,6 +54,61 @@ type AppConfig struct {
 	HTTPSecureTokenGrace    time.Duration
 }
 
+func versionStatusHandler(w http.ResponseWriter, r *http.Request) {
+	type result struct {
+		Version       string `json:"version"`
+		LatestVersion string `json:"latestVersion,omitempty"`
+		Repository    string `json:"repository"`
+		ReleaseURL    string `json:"releaseUrl,omitempty"`
+		UpdatedAt     string `json:"updatedAt,omitempty"`
+		RunURL        string `json:"runUrl,omitempty"`
+	}
+	const repo = "https://github.com/anonymous-writer/LeaseEditor-Dnsmasq"
+	out := result{Version: BuildVersion, Repository: repo}
+	client := &http.Client{Timeout: 5 * time.Second}
+	fetch := func(url string, dst any) error {
+		req, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
+		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("User-Agent", "LeaseEditor")
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("GitHub HTTP %s", resp.Status)
+		}
+		return json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(dst)
+	}
+	var release struct {
+		TagName string `json:"tag_name"`
+		HTMLURL string `json:"html_url"`
+	}
+	if fetch("https://api.github.com/repos/anonymous-writer/LeaseEditor-Dnsmasq/releases/latest", &release) == nil {
+		out.LatestVersion = release.TagName
+		out.ReleaseURL = release.HTMLURL
+	}
+	var runs struct {
+		WorkflowRuns []struct {
+			HTMLURL    string `json:"html_url"`
+			UpdatedAt  string `json:"updated_at"`
+			Conclusion string `json:"conclusion"`
+		} `json:"workflow_runs"`
+	}
+	if fetch("https://api.github.com/repos/anonymous-writer/LeaseEditor-Dnsmasq/actions/runs?per_page=20", &runs) == nil {
+		for _, run := range runs.WorkflowRuns {
+			if run.Conclusion == "success" {
+				out.UpdatedAt = run.UpdatedAt
+				out.RunURL = run.HTMLURL
+				break
+			}
+		}
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(out)
+}
+
 func Run(assets fs.FS) {
 	configPath := flag.String("config", "config.yaml", "Pfad zur YAML-Konfigurationsdatei")
 	flag.Parse()
@@ -72,6 +127,7 @@ func Run(assets fs.FS) {
 	mux.Handle("/static/", http.StripPrefix("/", staticServer))
 	mux.HandleFunc("/api/reservations", func(w http.ResponseWriter, r *http.Request) { handleReservations(w, r, hosts) })
 	mux.HandleFunc("/api/dnsmasq/restart", handleRestartDnsmasq)
+	mux.HandleFunc("/api/version", versionStatusHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
