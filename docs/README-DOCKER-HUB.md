@@ -1,16 +1,32 @@
+<p align="center">
+  <a href="https://github.com/anonymous-writer/LeaseEditor-Dnsmasq"><img src="https://img.shields.io/badge/GitHub-Repository-181717?logo=github" alt="GitHub Repository"></a>
+  <a href="https://hub.docker.com/r/anonymouswriter/leaseeditor-dnsmasq"><img src="https://img.shields.io/badge/Docker%20Hub-Image-2496ED?logo=docker" alt="Docker Hub Image"></a>
+  <a href="https://github.com/anonymous-writer/LeaseEditor-Dnsmasq/pkgs/container/leaseeditor-dnsmasq"><img src="https://img.shields.io/badge/GHCR-Docker%20Image-2496ED?logo=docker" alt="GHCR Docker Image"></a>
+  <img src="https://img.shields.io/badge/Go-1.27-00ADD8?logo=go" alt="Go 1.27">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2DA44E" alt="MIT License"></a>
+</p>
+
 # LeaseEditor-Dnsmasq
 
 **Your network. Your reservations. Clearly managed.**
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/anonymous-writer/LeaseLens-Dnsmasq/main/docs/LeaseLens-Statusicons/LeaseLens-Dnsmasq%20Network%20Dashboard.png" alt="LeaseEditor-Dnsmasq — DHCP Reservation Editor" width="506">
+</p>
+
 LeaseEditor-Dnsmasq is a lightweight Go web application for editing static DHCP reservations in a `dnsmasq` hosts file. It provides a browser-based interface for managing reservations, comments, and groups without manually editing the file line by line.
 
-![LeaseLens-Dnsmasq Network Dashboard](https://raw.githubusercontent.com/anonymous-writer/LeaseLens-Dnsmasq/main/docs/LeaseLens-Statusicons/LeaseLens-Dnsmasq%20Network%20Dashboard.png)
+## Project links
 
-- **GitHub repository:** https://github.com/anonymous-writer/LeaseEditor-Dnsmasq
-- **Related project:** [LeaseLens-Dnsmasq](https://github.com/anonymous-writer/LeaseLens-Dnsmasq) — a dashboard for viewing and monitoring DHCP leases.
-- **License:** MIT — see [LICENSE](LICENSE).
+- [GitHub repository and documentation](https://github.com/anonymous-writer/LeaseEditor-Dnsmasq)
+- [Docker Hub image](https://hub.docker.com/r/anonymouswriter/leaseeditor-dnsmasq)
+- [GHCR Docker image](https://github.com/anonymous-writer/LeaseEditor-Dnsmasq/pkgs/container/leaseeditor-dnsmasq)
+- [Related project: LeaseLens-Dnsmasq](https://github.com/anonymous-writer/LeaseLens-Dnsmasq) — a dashboard for viewing and monitoring DHCP leases.
+- [MIT License](LICENSE)
 
-![Screenshot](https://raw.githubusercontent.com/anonymous-writer/leaseeditor-dnsmasq/main/docs/screenshot1.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/anonymous-writer/leaseeditor-dnsmasq/main/docs/screenshot1.png" alt="LeaseEditor-Dnsmasq screenshot" width="800">
+</p>
 
 ## Features
 
