@@ -1,16 +1,25 @@
 # LeaseEditor-Dnsmasq
 
-**Your network. Your reservations. Clearly managed.**
+LeaseEditor -- Dnsmasq DHCP Reservation Editor.
 
-LeaseEditor-Dnsmasq is a lightweight Go web application for editing static DHCP reservations in a `dnsmasq` hosts file. It provides a browser-based interface for managing reservations, comments, and groups without manually editing the file line by line.
+**LeaseEditor-Dnsmasq — DHCP Reservation Editor for dnsmasq**
 
-![LeaseLens-Dnsmasq Network Dashboard](https://raw.githubusercontent.com/anonymous-writer/LeaseLens-Dnsmasq/main/docs/LeaseLens-Statusicons/LeaseLens-Dnsmasq%20Network%20Dashboard.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/anonymous-writer/LeaseLens-Dnsmasq/main/docs/LeaseLens-Statusicons/LeaseLens-Dnsmasq%20Network%20Dashboard.png" alt="LeaseEditor-Dnsmasq — DHCP Reservation Editor" width="506">
+</p>
 
-- **GitHub repository:** https://github.com/anonymous-writer/LeaseEditor-Dnsmasq
-- **Related project:** [LeaseLens-Dnsmasq](https://github.com/anonymous-writer/LeaseLens-Dnsmasq) — a dashboard for viewing and monitoring DHCP leases.
-- **License:** MIT — see [LICENSE](https://github.com/anonymous-writer/LeaseLens-Dnsmasq/blob/main/LICENSE).
+LeaseEditor-Dnsmasq is the web interface for managing static DHCP reservations in a `dnsmasq` hosts file. Manage reservations, comments, and groups conveniently in your browser instead of editing the file manually.
 
-![Screenshot](https://raw.githubusercontent.com/anonymous-writer/leaseeditor-dnsmasq/main/docs/screenshot1.png)
+## Project links
+
+- [GitHub repository and documentation](https://github.com/anonymous-writer/LeaseEditor-Dnsmasq)
+- [Related project: LeaseLens-Dnsmasq](https://github.com/anonymous-writer/LeaseLens-Dnsmasq) — a dashboard for viewing and monitoring active DHCP leases.
+- [Docker image on GitHub Container Registry](https://github.com/anonymous-writer/LeaseEditor-Dnsmasq/pkgs/container/leaseeditor-dnsmasq)
+- [MIT License](LICENSE)
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/anonymous-writer/leaseeditor-dnsmasq/main/docs/screenshot1.png" alt="LeaseEditor-Dnsmasq screenshot" width="800">
+</p>
 
 ## Features
 
@@ -183,4 +192,4 @@ Issues and pull requests are welcome. For bug reports, include reproduction step
 
 ## License
 
-MIT — see [LICENSE](https://github.com/anonymous-writer/LeaseLens-Dnsmasq/blob/main/LICENSE).
+MIT — see [LICENSE](LICENSE).
