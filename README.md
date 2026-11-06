@@ -1,5 +1,14 @@
 # LeaseEditor-Dnsmasq
 
+<p align="center">
+  <a href="https://github.com/anonymous-writer/LeaseEditor-Dnsmasq"><img src="https://img.shields.io/badge/GitHub-Repository-181717?logo=github" alt="GitHub Repository"></a>
+  <a href="https://hub.docker.com/r/anonymouswriter/leaseeditor-dnsmasq"><img src="https://img.shields.io/badge/Docker%20Hub-Image-2496ED?logo=docker" alt="Docker Hub Image"></a>
+  <a href="https://github.com/anonymous-writer/LeaseEditor-Dnsmasq/pkgs/container/leaseeditor-dnsmasq"><img src="https://img.shields.io/badge/GHCR-Docker%20Image-2496ED?logo=docker" alt="GHCR Docker Image"></a>
+  <img src="https://img.shields.io/badge/Go-1.27-00ADD8?logo=go" alt="Go 1.27">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2DA44E" alt="MIT License"></a>
+</p>
+
+
 LeaseEditor -- Dnsmasq DHCP Reservation Editor.
 
 **LeaseEditor-Dnsmasq — DHCP Reservation Editor for dnsmasq**
