@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/anonymous-writer/LeaseEditor-Dnsmasq/internal/proxytoken"
@@ -243,6 +244,12 @@ func loadConfig(path string) (AppConfig, error) {
 			return cfg, fmt.Errorf("%s:%d: unbekannter Parameter %q", path, lineNo+1, key)
 		}
 	}
+	// HOST is an optional environment override. Docker images set it to 0.0.0.0
+	// so the published container port is reachable; native installs retain the
+	// safer 127.0.0.1 default unless explicitly configured otherwise.
+	if host, set := os.LookupEnv("HOST"); set && strings.TrimSpace(host) != "" {
+		cfg.Host = strings.TrimSpace(host)
+	}
 	if cfg.HTTPSecure && (cfg.HTTPSecureTokenFile == "" || cfg.HTTPSecureTokenGrace >= cfg.HTTPSecureTokenValidity) {
 		return cfg, fmt.Errorf("https-secure: true benötigt gültige Token-Datei, Laufzeit und Grace-Period")
 	}
@@ -361,13 +368,31 @@ func readItems(path string) ([]Item, error) {
 			continue
 		}
 		parts := strings.Split(line, ",")
-		if len(parts) < 2 || len(parts) > 5 {
+		// Only parse the editor's explicitly supported layout. dnsmasq also
+		// accepts tag:, set:, id:, ignore and other fields; keep those lines raw
+		// rather than guessing their meaning and rewriting them on save.
+		if len(parts) < 2 || len(parts) > 5 || !macPattern.MatchString(strings.TrimSpace(parts[0])) {
 			items = append(items, Item{Kind: "raw", Raw: line})
 			continue
 		}
-		it := Item{Kind: "entry", Group: group, MAC: strings.TrimSpace(parts[0]), IPv4: strings.TrimSpace(parts[1])}
-		if len(parts) > 2 {
-			it.IPv6 = strings.Trim(strings.TrimSpace(parts[2]), "[]")
+		ipv4 := net.ParseIP(strings.TrimSpace(parts[1]))
+		if ipv4 == nil || ipv4.To4() == nil {
+			items = append(items, Item{Kind: "raw", Raw: line})
+			continue
+		}
+		it := Item{Kind: "entry", Group: group, MAC: strings.TrimSpace(parts[0]), IPv4: strings.TrimSpace(parts[1]), Raw: line}
+		if len(parts) > 2 && strings.TrimSpace(parts[2]) != "" {
+			third := strings.TrimSpace(parts[2])
+			if !strings.HasPrefix(third, "[") || !strings.HasSuffix(third, "]") {
+				items = append(items, Item{Kind: "raw", Raw: line})
+				continue
+			}
+			ipv6 := net.ParseIP(strings.Trim(third, "[]"))
+			if ipv6 == nil || ipv6.To4() != nil {
+				items = append(items, Item{Kind: "raw", Raw: line})
+				continue
+			}
+			it.IPv6 = strings.Trim(third, "[]")
 		}
 		if len(parts) > 3 {
 			it.Hostname = strings.TrimSpace(parts[3])
@@ -375,7 +400,6 @@ func readItems(path string) ([]Item, error) {
 		if len(parts) > 4 {
 			it.Lease = strings.TrimSpace(parts[4])
 		}
-		it.Raw = line
 		items = append(items, it)
 	}
 	return items, nil
@@ -478,6 +502,7 @@ func saveAtomic(path string, data []byte) error {
 	if err = os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
+	var originalOwner *syscall.Stat_t
 	if info, e := os.Lstat(abs); e == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return errors.New("Zieldatei ist ein Symlink; Speichern aus Sicherheitsgründen abgebrochen")
@@ -492,6 +517,10 @@ func saveAtomic(path string, data []byte) error {
 		if e = os.WriteFile(abs+".bak", old, info.Mode().Perm()); e != nil {
 			return fmt.Errorf("Sicherung konnte nicht geschrieben werden: %w", e)
 		}
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			ownerCopy := *stat
+			originalOwner = &ownerCopy
+		}
 	} else if !errors.Is(e, os.ErrNotExist) {
 		return e
 	}
@@ -504,6 +533,14 @@ func saveAtomic(path string, data []byte) error {
 	mode := os.FileMode(0644)
 	if info, e := os.Stat(abs); e == nil {
 		mode = info.Mode().Perm()
+	}
+	if originalOwner != nil {
+		// Atomic rename replaces the inode. Restore its uid/gid on the temporary
+		// file first; fail rather than silently changing ownership of the hosts file.
+		if err = tmp.Chown(int(originalOwner.Uid), int(originalOwner.Gid)); err != nil {
+			tmp.Close()
+			return fmt.Errorf("Eigentümer der DHCP-Datei kann nicht erhalten werden: %w", err)
+		}
 	}
 	if err = tmp.Chmod(mode); err != nil {
 		tmp.Close()

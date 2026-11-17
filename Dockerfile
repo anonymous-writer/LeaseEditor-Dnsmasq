@@ -15,5 +15,6 @@ WORKDIR /app
 COPY --from=build /out/leaseeditor-dnsmasq /usr/local/bin/leaseeditor-dnsmasq
 COPY config.yaml /app/config.yaml
 EXPOSE 3009
+ENV HOST=0.0.0.0
 USER leaseeditor
 ENTRYPOINT ["/usr/local/bin/leaseeditor-dnsmasq", "--config", "/app/config.yaml"]

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -75,6 +76,72 @@ func TestRequireTrustedHTTPSProxy(t *testing.T) {
 	}
 }
 
+func TestReadItemsKeepsUnsupportedDnsmasqFieldsRaw(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dnsmasq.dhcphosts")
+	input := "AA:BB:CC:DD:EE:01,set:trusted,192.168.1.20\n" +
+		"AA:BB:CC:DD:EE:02,192.168.1.21,printer\n"
+	if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+		t.Fatal(err)
+	}
+	items, err := readItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 || items[0].Kind != "raw" || items[1].Kind != "raw" {
+		t.Fatalf("unsupported dnsmasq syntax must remain raw: %#v", items)
+	}
+	out, err := serialize(items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSuffix(string(out), "\n"); got != strings.TrimSuffix(input, "\n") {
+		t.Fatalf("unsupported dnsmasq lines changed during round-trip:\n got: %q\nwant: %q", got, strings.TrimSuffix(input, "\n"))
+	}
+}
+
+func TestLoadConfigHostEnvironmentOverride(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte("hosts_file: /tmp/dhcphosts\nhost: 127.0.0.1\nport: 3009\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOST", "0.0.0.0")
+	cfg, err := loadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Host != "0.0.0.0" {
+		t.Fatalf("HOST environment override not applied: got %q", cfg.Host)
+	}
+}
+
+func TestSaveAtomicPreservesModeAndOwner(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dnsmasq.dhcphosts")
+	if err := os.WriteFile(path, []byte("old\n"), 0640); err != nil {
+		t.Fatal(err)
+	}
+	originalInfo, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalOwner, originalOK := originalInfo.Sys().(*syscall.Stat_t)
+	if err := saveAtomic(path, []byte("new\n")); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0640 {
+		t.Fatalf("file mode changed: got %04o want 0640", got)
+	}
+	newOwner, newOK := info.Sys().(*syscall.Stat_t)
+	if originalOK && newOK && (originalOwner.Uid != newOwner.Uid || originalOwner.Gid != newOwner.Gid) {
+		t.Fatalf("file ownership changed: old %d:%d new %d:%d", originalOwner.Uid, originalOwner.Gid, newOwner.Uid, newOwner.Gid)
+	}
+	if _, err := os.Stat(path + ".bak"); err != nil {
+		t.Fatalf("backup not created: %v", err)
+	}
+}
 
 func TestSerializeRejectsControlCharactersInGroup(t *testing.T) {
 	for _, group := range []string{"office\r#malicious", "office\n#malicious", "office\x00malicious"} {

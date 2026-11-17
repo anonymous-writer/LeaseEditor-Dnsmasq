@@ -72,6 +72,7 @@ services:
     container_name: leaseeditor-dnsmasq
     restart: unless-stopped
     environment:
+      HOST: "0.0.0.0"
       LOG_LEVEL: "INFO"
     ports:
       - "3009:3009"
@@ -109,7 +110,7 @@ The Docker image uses the same flat YAML-style configuration file as the native 
 | `https-secure-token-validity` | `720h` | Token lifetime / rotation interval |
 | `https-secure-token-grace` | `5m` | Previous-token acceptance window |
 
-The `LOG_LEVEL` environment variable can also set the minimum log level. If both the configuration value and environment variable are supplied, the environment variable takes precedence.
+The `HOST` environment variable overrides the `host` setting. Docker sets it to `0.0.0.0` so the published container port is reachable; native installations keep the safer `127.0.0.1` default. The `LOG_LEVEL` environment variable can also set the minimum log level. If both the configuration value and environment variable are supplied, the environment variable takes precedence.
 
 ## HTTPS-secure mode behind NGINX
 
